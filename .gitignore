@@ -1,0 +1,56 @@
+# Build results
+
+bin/
+obj/
+
+# Visual Studio files
+
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+
+.idea/
+*.sln.iml
+
+# Logs
+
+*.log
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# NuGet
+
+packages/
+*.nupkg
+*.snupkg
+
+# Build artifacts
+
+*.dll
+*.exe
+*.pdb
+
+# Temporary files
+
+*.tmp
+*.cache
+
+# Publish output
+
+publish/
+
+# Test results
+
+TestResults/
+
+# Resharper
+
+_ReSharper*/
+*.DotSettings.user
