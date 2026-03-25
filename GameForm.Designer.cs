@@ -1,5 +1,5 @@
 ﻿namespace runeforge;
-partial class GameForm
+public partial class GameForm
 {
     private System.ComponentModel.IContainer components = null;
     protected override void Dispose(bool disposing)
@@ -17,10 +17,16 @@ partial class GameForm
     /// </summary>
     private void InitializeComponent()
     {
-        components = new System.ComponentModel.Container();
+        SuspendLayout();
+        // 
+        // GameForm
+        // 
+        AutoScaleDimensions = new SizeF(9F, 20F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(800, 450);
+        ClientSize = new Size(782, 753);
+        Name = "GameForm";
         Text = "Runeforge";
+        ResumeLayout(false);
     }
 
     #endregion

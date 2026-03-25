@@ -2,6 +2,6 @@
 
 public enum RuneType
 {
-    Fire,
-    Ice,
+    Uruz,
+    Isa,
 }
