@@ -6,19 +6,24 @@ public class GameModel
     public List<Enemy> Enemies { get; } = new();
 
     private Random _random = new();
+    private RuneFactory _factory = new();
 
     public void SpawnRandomRune()
     {
-        var x = _random.Next(0, Table.Size);
-        var y = _random.Next(0, Table.Size);
+        var emptyCells = new List<(int x, int y)>();
+        for (var y = 0; y < Table.Size; y++)
+            for (var x = 0; x < Table.Size; x++)
+                if (Table.Get(x, y) == null)
+                    emptyCells.Add((x, y));
 
-        if (Table.Get(x, y) == null)
-        {
-            RuneType type = (RuneType)_random.Next(0, 2);
-            var rune = new Rune(type);
+        if (emptyCells.Count == 0)
+            return;
 
-            Table.Place(x, y, rune);
-        }
+        var index = _random.Next(emptyCells.Count);
+        var (randomX, randomY) = emptyCells[index];
+
+        var rune = _factory.CreateRandom();
+        Table.Place(randomX, randomY, rune);
     }
 
     public void SpawnEnemy()
@@ -26,22 +31,28 @@ public class GameModel
         Enemies.Add(new Enemy(50));
     }
 
-    public void Update()
+    public void Update(double dt)
     {
-        if (Enemies.Count == 0) SpawnEnemy();
+        if (Enemies.Count < 5)
+            SpawnEnemy();
 
-        var enemy = Enemies.FirstOrDefault(e => !e.IsDead);
+        foreach (var enemy in Enemies)
+            enemy.Update(dt);
 
-        if (enemy == null) return;
+        foreach (var (x, y, rune) in GetAllRunes())
+            rune.Update(this, dt);
 
+        Enemies.RemoveAll(e => e.IsDead);
+    }
+
+    public IEnumerable<(int x, int y, Rune rune)> GetAllRunes()
+    {
         for (var y = 0; y < Table.Size; y++)
         for (var x = 0; x < Table.Size; x++)
         {
             var rune = Table.Get(x, y);
-            if (rune != null)
-                enemy.TakeDamage(1);
+            if (rune != null) 
+                yield return (x, y, rune);
         }
-
-        Enemies.RemoveAll(e => e.IsDead);
     }
 }

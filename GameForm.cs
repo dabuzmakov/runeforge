@@ -14,13 +14,12 @@ public partial class GameForm : Form
         Controls.Add(gameField);
 
         var timer = new System.Windows.Forms.Timer();
-        timer.Interval = 1000;
+        timer.Interval = 15;
         timer.Tick += (s, e) =>
         {
-            model.Update();
+            model.Update(0.015);
             gameField.Invalidate();
         };
         timer.Start();
     }
-
 }

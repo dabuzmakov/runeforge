@@ -4,8 +4,11 @@ public class Enemy
 {
     public int MaxHp { get; }
     public int Hp { get; private set; }
-    public int Speed { get; private set; }
+    public double PathProgress { get; private set; } = 0;
+    public double Speed { get; private set; } = 0.2;
     public bool IsDead => Hp <= 0;
+
+    private double _slowMultiplier = 1.0;
 
     public Enemy(int hp)
     {
@@ -16,11 +19,16 @@ public class Enemy
     public void TakeDamage(int damage)
     {
         Hp -= damage;
-        if (IsDead) OnDeath();
+        if (Hp <= 0) Hp = 0;
     }
 
-    private void OnDeath()
+    public void ApplySlow(double percent)
     {
+        _slowMultiplier = 1.0 - percent;
+    }
 
+    public void Update(double dt)
+    {
+        PathProgress += Speed * _slowMultiplier * dt;
     }
 }
