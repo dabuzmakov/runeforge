@@ -54,7 +54,7 @@ public sealed class GameLoop : IDisposable
         while (_accumulator >= FixedDeltaSeconds)
         {
             _update(FixedDeltaSeconds);
-            _accumulator = 0;
+            _accumulator -= FixedDeltaSeconds;
         }
 
         _render();

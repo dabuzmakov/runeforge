@@ -1,10 +1,25 @@
+using runeforge.Effects;
+
 namespace runeforge.Models;
 
 public sealed class GameState
 {
-    public List<Enemy> Enemies { get; } = new(32);
+    public const int MaxHearts = 3;
 
-    public List<Rune> Runes { get; } = new(16);
+    // This is the main Model object and, at the same time, the small ECS world.
+    public List<EnemyEntity> Enemies { get; } = new(32);
 
-    public List<Projectile> Projectiles { get; } = new(64);
+    public List<RuneEntity> Runes { get; } = new(16);
+
+    public List<ProjectileEntity> Projectiles { get; } = new(64);
+
+    public List<AnimatedEffect> VisualEffects { get; } = new(32);
+
+    public GameUiState Ui { get; } = new();
+
+    public int EscapedEnemyCount { get; set; }
+
+    public int RemainingHearts => Math.Max(0, MaxHearts - EscapedEnemyCount);
+
+    public bool IsDefeated => EscapedEnemyCount >= MaxHearts;
 }
