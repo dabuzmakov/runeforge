@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Numerics;
 using runeforge.Configs;
@@ -11,11 +12,21 @@ public sealed class RuneView : IDisposable
     private const float MaxDrawSize = 80f;
     private const float CellSize = 100f;
     private const float TierPadding = 5f;
+    private const float BuffArrowPadding = 9f;
+    private const float BuffArrowStemWidth = 4f;
+    private const float BuffArrowStemHeight = 7f;
+    private const float BuffArrowHeadWidth = 11f;
+    private const float BuffArrowHeadHeight = 7f;
+    private const float BuffArrowBobAmplitude = 1.5f;
+    private const float BuffArrowInnerChevronInset = 2.4f;
 
     private readonly IReadOnlyDictionary<string, Bitmap> _runeTextures;
     private readonly ImageAttributes _imageAttributes;
     private readonly Font _tierFont;
     private readonly SolidBrush _tierBrush;
+    private readonly SolidBrush _buffArrowBrush;
+    private readonly Pen _buffArrowDetailPen;
+    private readonly Pen _buffArrowOutlinePen;
 
     public RuneView(IReadOnlyDictionary<string, Bitmap> runeTextures)
     {
@@ -23,6 +34,17 @@ public sealed class RuneView : IDisposable
         _imageAttributes = new ImageAttributes();
         _tierFont = FontLibrary.Create(12f, FontStyle.Bold);
         _tierBrush = new SolidBrush(Color.Gold);
+        _buffArrowBrush = new SolidBrush(Color.FromArgb(236, 217, 68, 211));
+        _buffArrowDetailPen = new Pen(Color.FromArgb(210, 244, 176, 242), 1.2f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round
+        };
+        _buffArrowOutlinePen = new Pen(Color.FromArgb(220, 245, 184, 244), 1.3f)
+        {
+            LineJoin = LineJoin.Round
+        };
     }
 
     public void Draw(Graphics graphics, RuneEntity rune)
@@ -37,7 +59,7 @@ public sealed class RuneView : IDisposable
 
     public void Draw(Graphics graphics, RuneEntity rune, Vector2 drawCenter, float scaleMultiplier, float alphaMultiplier)
     {
-        if (!_runeTextures.TryGetValue(rune.Data.TextureKey, out var texture))
+        if (!_runeTextures.TryGetValue(rune.Stats.TextureKey, out var texture))
         {
             return;
         }
@@ -53,6 +75,7 @@ public sealed class RuneView : IDisposable
 
         DrawTexture(graphics, texture, drawX, drawY, drawWidth, drawHeight, alphaMultiplier);
         DrawTier(graphics, rune, drawCenter, scaleMultiplier, alphaMultiplier);
+        DrawAttackSpeedBuffIndicator(graphics, rune, drawCenter, scaleMultiplier, alphaMultiplier);
     }
 
     public void DrawIcon(Graphics graphics, RuneType runeType, Rectangle bounds, float alphaMultiplier = 1f)
@@ -62,7 +85,7 @@ public sealed class RuneView : IDisposable
 
     public void DrawIcon(Graphics graphics, RuneType runeType, RectangleF bounds, float alphaMultiplier = 1f)
     {
-        var textureKey = RuneCatalog.Get(runeType).TextureKey;
+        var textureKey = RuneDatabase.Get(runeType).TextureKey;
         if (!_runeTextures.TryGetValue(textureKey, out var texture))
         {
             return;
@@ -85,6 +108,9 @@ public sealed class RuneView : IDisposable
         _imageAttributes.Dispose();
         _tierFont.Dispose();
         _tierBrush.Dispose();
+        _buffArrowBrush.Dispose();
+        _buffArrowDetailPen.Dispose();
+        _buffArrowOutlinePen.Dispose();
     }
 
     private void DrawTexture(Graphics graphics, Bitmap texture, float drawX, float drawY, float drawWidth, float drawHeight, float alphaMultiplier)
@@ -114,7 +140,7 @@ public sealed class RuneView : IDisposable
 
     private void DrawTier(Graphics graphics, RuneEntity rune, Vector2 drawCenter, float scaleMultiplier, float alphaMultiplier)
     {
-        var tierText = ToRoman(rune.Data.Tier);
+        var tierText = ToRoman(rune.Stats.Tier);
         var textSize = graphics.MeasureString(tierText, _tierFont);
         var halfSize = CellSize * 0.5f * scaleMultiplier;
         _tierBrush.Color = Color.FromArgb((int)(Math.Clamp(alphaMultiplier, 0f, 1f) * 255f), Color.Gold);
@@ -123,6 +149,55 @@ public sealed class RuneView : IDisposable
             drawCenter.Y - halfSize + (TierPadding * scaleMultiplier));
 
         graphics.DrawString(tierText, _tierFont, _tierBrush, textPosition);
+    }
+
+    private void DrawAttackSpeedBuffIndicator(Graphics graphics, RuneEntity rune, Vector2 drawCenter, float scaleMultiplier, float alphaMultiplier)
+    {
+        if (!rune.Buffs.HasAttackSpeedBuff)
+        {
+            return;
+        }
+
+        var halfSize = CellSize * 0.5f * scaleMultiplier;
+        var animationTime = (float)(Environment.TickCount64 * 0.0035);
+        var bobOffset = MathF.Sin(animationTime) * BuffArrowBobAmplitude * scaleMultiplier;
+        var pulse = 0.72f + (0.28f * ((MathF.Sin(animationTime + 0.8f) + 1f) * 0.5f));
+        var centerX = drawCenter.X + halfSize - (BuffArrowPadding * scaleMultiplier) - ((BuffArrowHeadWidth * 0.5f) * scaleMultiplier);
+        var topY = drawCenter.Y + halfSize - (BuffArrowPadding * scaleMultiplier) - ((BuffArrowStemHeight + BuffArrowHeadHeight) * scaleMultiplier) - bobOffset;
+        var stemWidth = BuffArrowStemWidth * scaleMultiplier;
+        var stemHeight = BuffArrowStemHeight * scaleMultiplier;
+        var headWidth = BuffArrowHeadWidth * scaleMultiplier;
+        var headHeight = BuffArrowHeadHeight * scaleMultiplier;
+        var alpha = (int)(Math.Clamp(alphaMultiplier * pulse, 0f, 1f) * 255f);
+        var detailAlpha = (int)(Math.Clamp(alphaMultiplier * (0.55f + (0.25f * pulse)), 0f, 1f) * 255f);
+
+        _buffArrowBrush.Color = Color.FromArgb(alpha, 217, 68, 211);
+        _buffArrowOutlinePen.Color = Color.FromArgb(alpha, 245, 184, 244);
+        _buffArrowDetailPen.Color = Color.FromArgb(detailAlpha, 244, 176, 242);
+
+        using var arrowPath = new GraphicsPath();
+        arrowPath.AddPolygon(
+        [
+            new PointF(centerX, topY),
+            new PointF(centerX + (headWidth * 0.5f), topY + (headHeight * 0.95f)),
+            new PointF(centerX + (stemWidth * 0.78f), topY + headHeight),
+            new PointF(centerX + (stemWidth * 0.5f), topY + headHeight + stemHeight),
+            new PointF(centerX - (stemWidth * 0.5f), topY + headHeight + stemHeight),
+            new PointF(centerX - (stemWidth * 0.78f), topY + headHeight),
+            new PointF(centerX - (headWidth * 0.5f), topY + (headHeight * 0.95f))
+        ]);
+
+        graphics.FillPath(_buffArrowBrush, arrowPath);
+        graphics.DrawPath(_buffArrowOutlinePen, arrowPath);
+
+        var chevronInset = BuffArrowInnerChevronInset * scaleMultiplier;
+        graphics.DrawLines(
+            _buffArrowDetailPen,
+        [
+            new PointF(centerX - ((headWidth * 0.5f) - chevronInset), topY + (headHeight * 0.72f)),
+            new PointF(centerX, topY + chevronInset),
+            new PointF(centerX + ((headWidth * 0.5f) - chevronInset), topY + (headHeight * 0.72f))
+        ]);
     }
 
     private static string ToRoman(int number)

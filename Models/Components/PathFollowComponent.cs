@@ -4,10 +4,6 @@ namespace runeforge.Models;
 
 public sealed class PathFollowComponent
 {
-    public float SlowMultiplier { get; private set; } = 1f;
-
-    public int SlowStacks { get; private set; }
-
     public float Progress { get; private set; }
 
     public int NextPathPointIndex { get; private set; } = 1;
@@ -21,7 +17,7 @@ public sealed class PathFollowComponent
             return;
         }
 
-        var remainingDistance = speed * SlowMultiplier * deltaTime;
+        var remainingDistance = speed * deltaTime;
 
         while (remainingDistance > 0f && !HasReachedGoal)
         {
@@ -61,16 +57,5 @@ public sealed class PathFollowComponent
             Progress += remainingDistance;
             remainingDistance = 0f;
         }
-    }
-
-    public void ApplySlowStack()
-    {
-        if (SlowStacks >= 3)
-        {
-            return;
-        }
-
-        SlowStacks++;
-        SlowMultiplier = 1f - (0.1f * SlowStacks);
     }
 }

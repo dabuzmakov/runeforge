@@ -1,22 +1,23 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using runeforge.Configs;
 using runeforge.Models;
 
 namespace runeforge.Views;
 
 public sealed class EnemyView : IDisposable
 {
+    private const float SquareCornerRadius = 7f;
+
     private readonly Font _font;
     private readonly StringFormat _textFormat;
-    private readonly SolidBrush _outerBrush;
-    private readonly SolidBrush _coreBrush;
     private readonly SolidBrush _highlightBrush;
     private readonly SolidBrush _badgeBrush;
     private readonly SolidBrush _textBrush;
-    private readonly Pen _borderPen;
     private readonly Pen _innerPen;
-    private readonly Pen[] _slowPens;
+    private readonly Pen _slowedOutlinePen;
     private readonly Pen _badgePen;
+    private readonly Dictionary<EnemyType, EnemyPalette> _palettes;
 
     public EnemyView()
     {
@@ -26,20 +27,18 @@ public sealed class EnemyView : IDisposable
             Alignment = StringAlignment.Center,
             LineAlignment = StringAlignment.Center
         };
-        _outerBrush = new SolidBrush(Color.FromArgb(188, 116, 72));
-        _coreBrush = new SolidBrush(Color.FromArgb(222, 150, 52, 60));
         _highlightBrush = new SolidBrush(Color.FromArgb(64, 255, 240, 225));
         _badgeBrush = new SolidBrush(Color.FromArgb(176, 26, 16, 18));
         _textBrush = new SolidBrush(Color.White);
-        _borderPen = new Pen(Color.FromArgb(210, 242, 198, 142), 1.6f);
         _innerPen = new Pen(Color.FromArgb(120, 255, 224, 196), 1f);
         _badgePen = new Pen(Color.FromArgb(140, 244, 213, 165), 1f);
-        _slowPens =
-        [
-            new Pen(Color.FromArgb(148, 105, 220, 255), 2f),
-            new Pen(Color.FromArgb(176, 105, 220, 255), 2f),
-            new Pen(Color.FromArgb(204, 105, 220, 255), 2f)
-        ];
+        _slowedOutlinePen = new Pen(Color.FromArgb(220, 88, 196, 255), 2.4f);
+        _palettes = new Dictionary<EnemyType, EnemyPalette>
+        {
+            { EnemyType.Normal, new EnemyPalette(new SolidBrush(Color.FromArgb(188, 116, 72)), new SolidBrush(Color.FromArgb(222, 150, 52, 60)), new Pen(Color.FromArgb(210, 242, 198, 142), 1.6f)) },
+            { EnemyType.Fast, new EnemyPalette(new SolidBrush(Color.FromArgb(194, 114, 140, 72)), new SolidBrush(Color.FromArgb(230, 198, 142, 58)), new Pen(Color.FromArgb(220, 248, 216, 146), 1.6f)) },
+            { EnemyType.Slow, new EnemyPalette(new SolidBrush(Color.FromArgb(184, 64, 88, 130)), new SolidBrush(Color.FromArgb(226, 86, 122, 176)), new Pen(Color.FromArgb(214, 180, 224, 255), 1.6f)) }
+        };
     }
 
     public void Draw(Graphics graphics, EnemyEntity enemy)
@@ -57,43 +56,43 @@ public sealed class EnemyView : IDisposable
     {
         _font.Dispose();
         _textFormat.Dispose();
-        _outerBrush.Dispose();
-        _coreBrush.Dispose();
         _highlightBrush.Dispose();
         _badgeBrush.Dispose();
         _textBrush.Dispose();
-        _borderPen.Dispose();
         _innerPen.Dispose();
         _badgePen.Dispose();
-        foreach (var slowPen in _slowPens)
+        _slowedOutlinePen.Dispose();
+        foreach (var palette in _palettes.Values)
         {
-            slowPen.Dispose();
+            palette.Dispose();
         }
     }
 
     private void DrawBody(Graphics graphics, EnemyEntity enemy, RectangleF bodyBounds)
     {
-        graphics.FillEllipse(_outerBrush, bodyBounds);
+        var palette = _palettes[enemy.Data.Type];
+        FillShape(graphics, palette.OuterBrush, bodyBounds, enemy.Data.Config.Shape);
 
         var innerBounds = Inflate(bodyBounds, -4f, -4f);
-        graphics.FillEllipse(_coreBrush, innerBounds);
-        graphics.DrawEllipse(_borderPen, bodyBounds);
+        FillShape(graphics, palette.CoreBrush, innerBounds, enemy.Data.Config.Shape);
+        DrawShape(graphics, palette.BorderPen, bodyBounds, enemy.Data.Config.Shape);
 
         var ringBounds = Inflate(bodyBounds, -2.5f, -2.5f);
-        graphics.DrawEllipse(_innerPen, ringBounds);
+        DrawShape(graphics, _innerPen, ringBounds, enemy.Data.Config.Shape);
 
-        graphics.FillEllipse(
+        FillShape(
+            graphics,
             _highlightBrush,
             bodyBounds.X + (bodyBounds.Width * 0.18f),
             bodyBounds.Y + (bodyBounds.Height * 0.12f),
             bodyBounds.Width * 0.28f,
-            bodyBounds.Height * 0.18f);
+            bodyBounds.Height * 0.18f,
+            EnemyShape.Circle);
 
-        if (enemy.Path.SlowStacks > 0)
+        if (enemy.StatusEffects.IsSlowed)
         {
             var auraBounds = Inflate(bodyBounds, 4f, 4f);
-            var slowPen = _slowPens[Math.Min(enemy.Path.SlowStacks, _slowPens.Length) - 1];
-            graphics.DrawEllipse(slowPen, auraBounds);
+            DrawShape(graphics, _slowedOutlinePen, auraBounds, enemy.Data.Config.Shape);
         }
     }
 
@@ -119,5 +118,76 @@ public sealed class EnemyView : IDisposable
             rectangle.Y - amountY,
             rectangle.Width + (amountX * 2f),
             rectangle.Height + (amountY * 2f));
+    }
+
+    private static void FillShape(Graphics graphics, Brush brush, RectangleF bounds, EnemyShape shape)
+    {
+        if (shape == EnemyShape.Square)
+        {
+            using var path = CreateRoundedRectanglePath(bounds, SquareCornerRadius);
+            graphics.FillPath(brush, path);
+            return;
+        }
+
+        graphics.FillEllipse(brush, bounds);
+    }
+
+    private static void FillShape(Graphics graphics, Brush brush, float x, float y, float width, float height, EnemyShape shape)
+    {
+        FillShape(graphics, brush, new RectangleF(x, y, width, height), shape);
+    }
+
+    private static void DrawShape(Graphics graphics, Pen pen, RectangleF bounds, EnemyShape shape)
+    {
+        if (shape == EnemyShape.Square)
+        {
+            using var path = CreateRoundedRectanglePath(bounds, SquareCornerRadius);
+            graphics.DrawPath(pen, path);
+            return;
+        }
+
+        graphics.DrawEllipse(pen, bounds);
+    }
+
+    private static GraphicsPath CreateRoundedRectanglePath(RectangleF bounds, float radius)
+    {
+        var clampedRadius = MathF.Min(radius, MathF.Min(bounds.Width, bounds.Height) * 0.5f);
+        var diameter = clampedRadius * 2f;
+        var path = new GraphicsPath();
+
+        path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+
+        return path;
+    }
+
+    private sealed class EnemyPalette : IDisposable
+    {
+        public EnemyPalette(SolidBrush outerBrush, SolidBrush coreBrush, Pen borderPen)
+        {
+            OuterBrush = outerBrush;
+            CoreBrush = coreBrush;
+            BorderPen = borderPen;
+        }
+
+        public SolidBrush OuterBrush { get; }
+
+        public SolidBrush CoreBrush { get; }
+
+        public Pen BorderPen { get; }
+
+        public void Dispose()
+        {
+            if (!ReferenceEquals(OuterBrush, CoreBrush))
+            {
+                CoreBrush.Dispose();
+            }
+
+            OuterBrush.Dispose();
+            BorderPen.Dispose();
+        }
     }
 }

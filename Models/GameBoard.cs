@@ -20,6 +20,7 @@ public sealed class GameBoard
         Grid = new TableGrid(TableBounds);
         BagBounds = CreateBagBounds(screenWidth, screenHeight);
         Path = CreatePath(TableBounds);
+        PathLength = PathGeometry.ComputeLength(Path);
     }
 
     public Rectangle ViewportBounds { get; }
@@ -31,6 +32,8 @@ public sealed class GameBoard
     public TableGrid Grid { get; }
 
     public IReadOnlyList<Vector2> Path { get; }
+
+    public float PathLength { get; }
 
     private static Rectangle CreateTableBounds(int screenWidth, int screenHeight)
     {

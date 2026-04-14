@@ -20,6 +20,7 @@ public sealed class GameRenderer : IDisposable
     private const float HeartIconSize = 30f;
     private const float HeartIconSpacing = 10f;
     private const float HeartPanelPadding = 10f;
+    private static readonly Color GeboBuffAccentColor = Color.FromArgb(217, 68, 211);
 
     private readonly GameBoard _board;
     private readonly PointF[] _pathPoints;
@@ -34,7 +35,9 @@ public sealed class GameRenderer : IDisposable
     private readonly EnemyView _enemyView;
     private readonly RuneView _runeView;
     private readonly ProjectileView _projectileView;
+    private readonly SowiloBeamView _sowiloBeamView;
     private readonly EffectView _effectView;
+    private readonly RuneAttachedEffectRenderer _attachedEffectRenderer;
     private readonly SolidBrush _tableFillBrush;
     private readonly SolidBrush _tableInnerBrush;
     private readonly Pen _pathPen;
@@ -50,14 +53,21 @@ public sealed class GameRenderer : IDisposable
     private readonly SolidBrush _defeatTextBrush;
     private readonly Pen _defeatPanelBorderPen;
     private readonly Font _defeatTitleFont;
+    private readonly Font _waveTitleFont;
+    private readonly Font _economyTitleFont;
+    private readonly Font _economyValueFont;
+    private readonly Font _bagCostFont;
     private readonly Font _buildTitleFont;
     private readonly Font _buildTextFont;
     private readonly Font _buildLabelFont;
     private readonly StringFormat _centerStringFormat;
 
-    public GameRenderer(GameBoard board)
+    private readonly GameModel _model;
+
+    public GameRenderer(GameModel model)
     {
-        _board = board;
+        _model = model;
+        _board = model.Board;
         _pathPoints = ToPointArray(_board.Path);
         _tableOuterPath = CreateRoundedRectanglePath(Inflate(_board.TableBounds, 18, 18), TableCornerRadius + 6);
         _tableInnerPath = CreateRoundedRectanglePath(Inflate(_board.TableBounds, 8, 8), TableCornerRadius);
@@ -70,7 +80,9 @@ public sealed class GameRenderer : IDisposable
         _enemyView = new EnemyView();
         _runeView = new RuneView(_runeTextures);
         _projectileView = new ProjectileView();
+        _sowiloBeamView = new SowiloBeamView();
         _effectView = new EffectView();
+        _attachedEffectRenderer = new RuneAttachedEffectRenderer(_effectView);
         _tableFillBrush = new SolidBrush(Color.FromArgb(44, 40, 52));
         _tableInnerBrush = new SolidBrush(Color.FromArgb(30, 30, 38));
         _pathShadowPen = CreatePathPen(Color.FromArgb(34, 26, 24), PathShadowWidth);
@@ -86,6 +98,10 @@ public sealed class GameRenderer : IDisposable
         _defeatTextBrush = new SolidBrush(Color.FromArgb(236, 230, 220));
         _defeatPanelBorderPen = new Pen(Color.FromArgb(170, 148, 90, 82), 2f);
         _defeatTitleFont = FontLibrary.Create(24f, FontStyle.Bold);
+        _waveTitleFont = FontLibrary.Create(18f, FontStyle.Bold);
+        _economyTitleFont = FontLibrary.Create(13f, FontStyle.Bold);
+        _economyValueFont = FontLibrary.Create(18f, FontStyle.Bold);
+        _bagCostFont = FontLibrary.Create(16f, FontStyle.Bold);
         _buildTitleFont = FontLibrary.Create(30f, FontStyle.Bold);
         _buildTextFont = FontLibrary.Create(18f, FontStyle.Bold);
         _buildLabelFont = FontLibrary.Create(18f, FontStyle.Regular);
@@ -96,10 +112,9 @@ public sealed class GameRenderer : IDisposable
         };
     }
 
-    public void Draw(
-        Graphics graphics,
-        GameState gameState)
+    public void Draw(Graphics graphics)
     {
+        var gameState = _model.State;
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
         graphics.PixelOffsetMode = PixelOffsetMode.Half;
         graphics.CompositingQuality = CompositingQuality.HighSpeed;
@@ -114,16 +129,22 @@ public sealed class GameRenderer : IDisposable
 
         DrawPath(graphics);
         DrawTable(graphics);
+        DrawBuffedRuneCells(graphics, gameState.Runes);
         DrawRunes(graphics, gameState.Runes, gameState.Ui.DraggedRune);
+        _attachedEffectRenderer.Draw(graphics, gameState.Runes, gameState.Ui.DraggedRune);
         DrawProjectiles(graphics, gameState.Projectiles);
         DrawEnemies(graphics, gameState.Enemies);
+        DrawSowiloBeams(graphics, gameState.SowiloBeams);
 
         graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
         DrawBag(graphics, gameState.Ui.UseOpenBagSprite, gameState.Ui.BagScale);
         DrawTopLayerRunes(graphics, gameState.Runes, gameState.Ui.DraggedRune);
         DrawEffects(graphics, gameState.VisualEffects);
         DrawHeartsUi(graphics, gameState);
+        DrawWaveUi(graphics, gameState);
+        DrawRunePointsUi(graphics, gameState);
         DrawInGameBuildPanel(graphics, gameState.Ui.BuildSelection);
+        DrawBagSpawnCostBadge(graphics, gameState);
         DrawDraggedRune(graphics, gameState.Ui.DraggedRune, gameState.Ui.DraggedRunePosition);
         DrawDefeatOverlay(graphics, gameState);
     }
@@ -133,6 +154,7 @@ public sealed class GameRenderer : IDisposable
         _enemyView.Dispose();
         _runeView.Dispose();
         _projectileView.Dispose();
+        _sowiloBeamView.Dispose();
         _effectView.Dispose();
         _tableOuterPath.Dispose();
         _tableInnerPath.Dispose();
@@ -155,6 +177,10 @@ public sealed class GameRenderer : IDisposable
         _defeatTextBrush.Dispose();
         _defeatPanelBorderPen.Dispose();
         _defeatTitleFont.Dispose();
+        _waveTitleFont.Dispose();
+        _economyTitleFont.Dispose();
+        _economyValueFont.Dispose();
+        _bagCostFont.Dispose();
         _buildTitleFont.Dispose();
         _buildTextFont.Dispose();
         _buildLabelFont.Dispose();
@@ -211,6 +237,38 @@ public sealed class GameRenderer : IDisposable
         graphics.DrawImage(texture, drawX, drawY, drawWidth, drawHeight);
     }
 
+    private void DrawBuffedRuneCells(Graphics graphics, IReadOnlyList<RuneEntity> runes)
+    {
+        var animationTime = (float)(Environment.TickCount64 * 0.0045);
+        var pulse = 0.72f + (0.28f * ((MathF.Sin(animationTime) + 1f) * 0.5f));
+        var outerAlpha = (int)(150f * pulse);
+        var innerAlpha = (int)(245f * pulse);
+
+        using var outerPen = new Pen(Color.FromArgb(outerAlpha, GeboBuffAccentColor), 2.2f)
+        {
+            LineJoin = LineJoin.Round
+        };
+        using var innerPen = new Pen(Color.FromArgb(innerAlpha, GeboBuffAccentColor), 1.2f)
+        {
+            LineJoin = LineJoin.Round
+        };
+
+        for (var i = 0; i < runes.Count; i++)
+        {
+            var rune = runes[i];
+            if (!rune.Buffs.HasAttackSpeedBuff)
+            {
+                continue;
+            }
+
+            var cellBounds = Inflate(_board.Grid.GetCell(rune.Grid.Row, rune.Grid.Column).Bounds, -5, -5);
+            using var outerPath = CreateRoundedRectanglePath(cellBounds, 12);
+            using var innerPath = CreateRoundedRectanglePath(Inflate(cellBounds, -3, -3), 10);
+            graphics.DrawPath(outerPen, outerPath);
+            graphics.DrawPath(innerPen, innerPath);
+        }
+    }
+
     private void DrawRunes(Graphics graphics, IReadOnlyList<RuneEntity> runes, RuneEntity? draggedRune)
     {
         foreach (var rune in runes)
@@ -254,6 +312,16 @@ public sealed class GameRenderer : IDisposable
         foreach (var effect in effects)
         {
             _effectView.Draw(graphics, effect);
+        }
+    }
+
+    private void DrawSowiloBeams(Graphics graphics, IReadOnlyList<SowiloBeamInstance> beams)
+    {
+        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+        foreach (var beam in beams)
+        {
+            _sowiloBeamView.Draw(graphics, beam);
         }
     }
 
@@ -495,6 +563,82 @@ public sealed class GameRenderer : IDisposable
         }
     }
 
+    private void DrawWaveUi(Graphics graphics, GameState gameState)
+    {
+        var heartsPanelWidth = (GameState.MaxHearts * HeartIconSize) + ((GameState.MaxHearts - 1) * HeartIconSpacing) + (HeartPanelPadding * 2f);
+        var panelRect = new RectangleF(
+            22f,
+            18f + HeartIconSize + (HeartPanelPadding * 2f) + 10f,
+            heartsPanelWidth,
+            HeartIconSize + (HeartPanelPadding * 2f));
+
+        using var panelPath = CreateRoundedRectanglePath(Rectangle.Round(panelRect), 18);
+        using var panelBrush = new SolidBrush(Color.FromArgb(168, 24, 20, 28));
+        using var panelBorderPen = new Pen(Color.FromArgb(124, 98, 88, 104), 1.5f);
+        using var titleBrush = new SolidBrush(Color.FromArgb(236, 230, 220));
+
+        graphics.FillPath(panelBrush, panelPath);
+        graphics.DrawPath(panelBorderPen, panelPath);
+
+        graphics.DrawString($"Wave {gameState.Waves.CurrentWaveNumber}", _waveTitleFont, titleBrush, panelRect, _centerStringFormat);
+    }
+
+    private void DrawRunePointsUi(Graphics graphics, GameState gameState)
+    {
+        var panelWidth = (GameState.MaxHearts * HeartIconSize) + ((GameState.MaxHearts - 1) * HeartIconSpacing) + (HeartPanelPadding * 2f);
+        var panelHeight = HeartIconSize + (HeartPanelPadding * 2f);
+        var panelRect = new RectangleF(
+            _board.ViewportBounds.Left + 160f,
+            18f,
+            panelWidth,
+            panelHeight);
+
+        using var panelPath = CreateRoundedRectanglePath(Rectangle.Round(panelRect), 18);
+        using var panelBrush = new SolidBrush(Color.FromArgb(176, 28, 24, 34));
+        using var panelBorderPen = new Pen(Color.FromArgb(150, 148, 132, 92), 1.5f);
+        using var titleBrush = new SolidBrush(Color.FromArgb(198, 210, 202, 188));
+        using var valueBrush = new SolidBrush(Color.FromArgb(236, 230, 220));
+
+        graphics.FillPath(panelBrush, panelPath);
+        graphics.DrawPath(panelBorderPen, panelPath);
+
+        var titleRect = new RectangleF(panelRect.X, panelRect.Y + 6f, panelRect.Width, 14f);
+        var valueRect = new RectangleF(panelRect.X, panelRect.Y + 20f, panelRect.Width, 24f);
+        graphics.DrawString("Rune Points", _economyTitleFont, titleBrush, titleRect, _centerStringFormat);
+        graphics.DrawString($"{gameState.Economy.RunePoints} RP", _economyValueFont, valueBrush, valueRect, _centerStringFormat);
+    }
+
+    private void DrawBagSpawnCostBadge(Graphics graphics, GameState gameState)
+    {
+        var canAfford = gameState.Economy.CanAffordCurrentRuneSpawn;
+        const float badgeWidth = 78f;
+        const float badgeHeight = 30f;
+        var badgeRect = new RectangleF(
+            _board.BagBounds.Left + ((_board.BagBounds.Width - badgeWidth) * 0.5f),
+            _board.BagBounds.Top + 88f,
+            badgeWidth,
+            badgeHeight);
+
+        var shadowRect = new RectangleF(badgeRect.X, badgeRect.Y + 2f, badgeRect.Width, badgeRect.Height);
+        using var shadowPath = CreateRoundedRectanglePath(Rectangle.Round(shadowRect), 13);
+        using var badgePath = CreateRoundedRectanglePath(Rectangle.Round(badgeRect), 13);
+        using var shadowBrush = new SolidBrush(Color.FromArgb(58, 8, 6, 8));
+        using var badgeBrush = new SolidBrush(Color.FromArgb(138, 38, 28, 22));
+        using var badgeBorderPen = new Pen(Color.FromArgb(126, 170, 146, 106), 1.1f);
+        using var textBrush = new SolidBrush(canAfford
+            ? Color.FromArgb(255, 246, 236, 214)
+            : Color.FromArgb(255, 232, 128, 128));
+        using var textShadowBrush = new SolidBrush(Color.FromArgb(116, 12, 10, 10));
+
+        graphics.FillPath(shadowBrush, shadowPath);
+        graphics.FillPath(badgeBrush, badgePath);
+        graphics.DrawPath(badgeBorderPen, badgePath);
+        var textRect = new RectangleF(badgeRect.X, badgeRect.Y + 3, badgeRect.Width, badgeRect.Height);
+        var textShadowRect = new RectangleF(textRect.X, textRect.Y + 1f, textRect.Width, textRect.Height);
+        graphics.DrawString($"{gameState.Economy.CurrentRuneSpawnCost} RP", _bagCostFont, textShadowBrush, textShadowRect, _centerStringFormat);
+        graphics.DrawString($"{gameState.Economy.CurrentRuneSpawnCost} RP", _bagCostFont, textBrush, textRect, _centerStringFormat);
+    }
+
     private static PointF[] ToPointArray(IReadOnlyList<Vector2> points)
     {
         var result = new PointF[points.Count];
@@ -576,7 +720,7 @@ public sealed class GameRenderer : IDisposable
         var spriteDirectory = ResolveSpriteDirectory();
         var textures = new Dictionary<string, Bitmap>();
 
-        foreach (var runeDefinition in RuneCatalog.All)
+        foreach (var runeDefinition in RuneDatabase.All)
         {
             var textureKey = runeDefinition.TextureKey;
             var texturePath = Path.Combine(spriteDirectory, textureKey + ".png");

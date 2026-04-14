@@ -7,10 +7,10 @@ public sealed class RuneFactory
 {
     public RuneEntity Create(TableGrid.GridCell cell, RuneType type, int tier = 1)
     {
-        var config = RuneCatalog.Get(type);
+        var runeData = RuneDatabase.Get(type);
 
         return new RuneEntity(
-            config: config,
+            runeData: runeData,
             position: cell.Center,
             gridRow: cell.Row,
             gridColumn: cell.Column,

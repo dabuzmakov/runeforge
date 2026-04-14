@@ -7,8 +7,8 @@ public sealed class EnemyDataComponent
     public EnemyDataComponent(EnemyConfig config, int tier)
     {
         Config = config;
-        Tier = tier;
-        MaxHealth = config.BaseHealth * tier;
+        Tier = Math.Max(1, tier);
+        MaxHealth = EnemyBalance.CalculateHealth(config, Tier);
         Health = MaxHealth;
         IsAlive = true;
     }

@@ -1,4 +1,5 @@
 using runeforge.Controllers;
+using runeforge.Configs;
 using runeforge.Models;
 using runeforge.Views;
 
@@ -9,15 +10,17 @@ public partial class GameForm : Form
     private const int CursorDrawSize = 36;
 
     private readonly GameLoop _gameLoop;
-    private readonly GameBoard _board;
+    private readonly GameModel _model;
     private readonly GameController _controller;
     private readonly GameRenderer _renderer;
     private readonly Bitmap _defaultCursorTexture;
     private readonly Bitmap _addCursorTexture;
     private readonly Bitmap _moveUpCursorTexture;
     private readonly Bitmap _subtractCursorTexture;
+    private readonly ContextMenuStrip _devSpawnMenu;
 
     private Point _mousePosition;
+    private Point _devSpawnMenuPosition;
     private bool _isLeftMouseDown;
 
     public GameForm()
@@ -33,13 +36,14 @@ public partial class GameForm : Form
 
         UpdateStyles();
 
-        _board = new GameBoard(ClientSize.Width, ClientSize.Height);
-        _controller = new GameController(_board);
-        _renderer = new GameRenderer(_board);
+        _model = new GameModel(new GameBoard(ClientSize.Width, ClientSize.Height));
+        _controller = new GameController(_model);
+        _renderer = new GameRenderer(_model);
         _defaultCursorTexture = LoadCursorTexture("Cursor Default");
         _addCursorTexture = LoadCursorTexture("Cursor Add");
         _moveUpCursorTexture = LoadCursorTexture("Cursor Move Up");
         _subtractCursorTexture = LoadCursorTexture("Cursor Substract");
+        _devSpawnMenu = CreateDevSpawnMenu();
         _gameLoop = new GameLoop(UpdateFrame, Invalidate);
 
         _gameLoop.Start();
@@ -48,7 +52,7 @@ public partial class GameForm : Form
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.Clear(GameRenderer.BackgroundColor);
-        _renderer.Draw(e.Graphics, _controller.State);
+        _renderer.Draw(e.Graphics);
         DrawCursor(e.Graphics);
     }
 
@@ -61,6 +65,7 @@ public partial class GameForm : Form
         _addCursorTexture.Dispose();
         _moveUpCursorTexture.Dispose();
         _subtractCursorTexture.Dispose();
+        _devSpawnMenu.Dispose();
         base.OnFormClosed(e);
     }
 
@@ -90,6 +95,10 @@ public partial class GameForm : Form
         {
             _isLeftMouseDown = true;
             Capture = true;
+        }
+        else if (e.Button == MouseButtons.Right)
+        {
+            ShowDevSpawnMenuIfAvailable(e.Location);
         }
 
         base.OnMouseDown(e);
@@ -142,14 +151,14 @@ public partial class GameForm : Form
     {
         return !_controller.State.Ui.BuildSelection.IsOpen &&
             _controller.State.Ui.DraggedRune != null &&
-            _board.BagBounds.Contains(_mousePosition);
+            _model.Board.BagBounds.Contains(_mousePosition);
     }
 
     private bool ShouldUseAddCursor()
     {
         return !_controller.State.Ui.BuildSelection.IsOpen &&
             _controller.State.Ui.DraggedRune == null &&
-            _board.BagBounds.Contains(_mousePosition);
+            _model.Board.BagBounds.Contains(_mousePosition);
     }
 
     private static Bitmap LoadCursorTexture(string textureName)
@@ -175,5 +184,41 @@ public partial class GameForm : Form
         }
 
         throw new FileNotFoundException($"Cursor texture '{textureName}' was not found.");
+    }
+
+    private ContextMenuStrip CreateDevSpawnMenu()
+    {
+        var menu = new ContextMenuStrip
+        {
+            ShowImageMargin = false
+        };
+
+        foreach (var runeType in RuneDatabase.AllTypes)
+        {
+            var runeMenuItem = new ToolStripMenuItem(runeType.ToString());
+
+            for (var tier = RuneTierTuning.MinTier; tier <= RuneTierTuning.MaxTier; tier++)
+            {
+                var tierValue = tier;
+                var tierMenuItem = new ToolStripMenuItem($"Tier {tierValue}");
+                tierMenuItem.Click += (_, _) => _controller.TrySpawnDevRuneAt(_devSpawnMenuPosition, runeType, tierValue);
+                runeMenuItem.DropDownItems.Add(tierMenuItem);
+            }
+
+            menu.Items.Add(runeMenuItem);
+        }
+
+        return menu;
+    }
+
+    private void ShowDevSpawnMenuIfAvailable(Point location)
+    {
+        if (!_controller.CanOpenDevSpawnMenuAt(location))
+        {
+            return;
+        }
+
+        _devSpawnMenuPosition = location;
+        _devSpawnMenu.Show(this, location);
     }
 }

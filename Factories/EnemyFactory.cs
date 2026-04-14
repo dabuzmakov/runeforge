@@ -12,8 +12,8 @@ public sealed class EnemyFactory
         return new EnemyEntity(definition, position, tier);
     }
 
-    public EnemyEntity CreateBasic(Vector2 position, int tier = 1)
+    public EnemyEntity CreateNormal(Vector2 position, int tier = 1)
     {
-        return Create(EnemyType.Basic, position, tier);
+        return Create(EnemyType.Normal, position, tier);
     }
 }

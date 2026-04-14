@@ -36,9 +36,9 @@ public static class BuildSelectionLayout
         var gridWidth = (Columns * CardWidth) + ((Columns - 1) * SlotGap);
         var startX = panel.Left + ((panel.Width - gridWidth) / 2);
         var startY = panel.Top + 170;
-        var layouts = new List<RuneOptionLayout>(RuneCatalog.AllTypes.Count);
+        var layouts = new List<RuneOptionLayout>(RuneDatabase.AllTypes.Count);
 
-        for (var i = 0; i < RuneCatalog.AllTypes.Count; i++)
+        for (var i = 0; i < RuneDatabase.AllTypes.Count; i++)
         {
             var row = i / Columns;
             var column = i % Columns;
@@ -58,7 +58,7 @@ public static class BuildSelectionLayout
                 cardBounds.Width - 12,
                 18);
 
-            layouts.Add(new RuneOptionLayout(RuneCatalog.AllTypes[i], cardBounds, iconBounds, labelBounds));
+            layouts.Add(new RuneOptionLayout(RuneDatabase.AllTypes[i], cardBounds, iconBounds, labelBounds));
         }
 
         return layouts;

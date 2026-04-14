@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Numerics;
+using runeforge.Configs;
 using runeforge.Models;
 
 namespace runeforge.Effects;
@@ -72,6 +73,12 @@ public static class EffectRegistry
         return true;
     }
 
+    public static bool TryCreateKenazExplosionEffect(Vector2 position, out AnimatedEffect? effect, float? scale = null)
+    {
+        effect = new AnimatedEffect(Get(EffectType.KenazExplosion), KenazTuning.ExplosionEffectRowIndex, position, scale);
+        return true;
+    }
+
     public static bool TryCreateRuneSpawnEffect(Vector2 position, RuneColor color, out AnimatedEffect? effect)
     {
         effect = null;
@@ -96,14 +103,23 @@ public static class EffectRegistry
         return true;
     }
 
+    public static SpriteSheetEffectDefinition GetRaidoOverloadEffect()
+    {
+        return Get(EffectType.RaidoOverload);
+    }
+
     private static SpriteSheetEffectDefinition[] CreateDefinitions()
     {
         var runeSpawnTexturePath = ResolveEffectTexturePath("Part 12", "rune_spawn.png");
         var runeRemoveTexturePath = ResolveEffectTexturePath("Part 3", "rune_remove.png");
         var mergeTexturePath = ResolveEffectTexturePath("Part 9", "merge.png");
+        var kenazExplosionTexturePath = ResolveEffectTexturePath("Part 9", "kenaz-effect.png");
+        var raidoOverloadTexturePath = ResolveEffectTexturePath("Part 14", "raidho-effect.png");
         var mergeFrameCount = DetermineFrameCount(mergeTexturePath, EffectFrameSize);
+        var kenazExplosionFrameCount = DetermineFrameCount(kenazExplosionTexturePath, EffectFrameSize);
         var runeSpawnFrameCount = DetermineFrameCount(runeSpawnTexturePath, EffectFrameSize);
         var runeRemoveFrameCount = DetermineFrameCount(runeRemoveTexturePath, EffectFrameSize);
+        var raidoOverloadFrameCount = DetermineFrameCount(raidoOverloadTexturePath, EffectFrameSize);
 
         return
         [
@@ -115,6 +131,14 @@ public static class EffectRegistry
                 mergeFrameCount,
                 frameDuration: 0.07f,
                 defaultScale: 2.2f),
+            new SpriteSheetEffectDefinition(
+                EffectType.KenazExplosion,
+                kenazExplosionTexturePath,
+                EffectFrameSize,
+                EffectFrameSize,
+                kenazExplosionFrameCount,
+                frameDuration: 0.05f,
+                defaultScale: KenazTuning.ExplosionEffectScale),
             new SpriteSheetEffectDefinition(
                 EffectType.RuneSpawn,
                 runeSpawnTexturePath,
@@ -130,7 +154,15 @@ public static class EffectRegistry
                 EffectFrameSize,
                 runeRemoveFrameCount,
                 frameDuration: 0.05f,
-                defaultScale: 3.3f)
+                defaultScale: 3.3f),
+            new SpriteSheetEffectDefinition(
+                EffectType.RaidoOverload,
+                raidoOverloadTexturePath,
+                EffectFrameSize,
+                EffectFrameSize,
+                raidoOverloadFrameCount,
+                frameDuration: 0.06f,
+                defaultScale: RaidoTuning.OverloadEffectScale)
         ];
     }
 
@@ -175,4 +207,5 @@ public static class EffectRegistry
 
         throw new FileNotFoundException($"Could not locate effect texture '{fileName}' in Assets/Effects/{partDirectory}.");
     }
+
 }

@@ -4,7 +4,7 @@ namespace runeforge.Systems;
 
 public sealed class ProjectileSystem
 {
-    public void Update(GameState gameState, float deltaTime, RuneEffectSystem runeEffectSystem)
+    public void Update(GameState gameState, float deltaTime, RuneEffectSystem runeEffectSystem, EffectAnimationSystem effectAnimationSystem)
     {
         for (var i = 0; i < gameState.Projectiles.Count; i++)
         {
@@ -16,7 +16,7 @@ public sealed class ProjectileSystem
                 continue;
             }
 
-            runeEffectSystem.ApplyHitEffects(gameState, projectile);
+            runeEffectSystem.ApplyHitEffects(gameState, projectile, effectAnimationSystem);
             projectile.Flight.ClearHitTarget();
         }
 

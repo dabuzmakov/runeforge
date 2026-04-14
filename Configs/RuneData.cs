@@ -3,11 +3,9 @@ using runeforge.Models;
 
 namespace runeforge.Configs;
 
-public sealed class RuneConfig
+public sealed class RuneData
 {
-    // Config is a template for a rune type.
-    // A real rune on the board is created later as an entity with components.
-    public RuneConfig(
+    public RuneData(
         RuneType type,
         RuneColor color,
         string textureKey,

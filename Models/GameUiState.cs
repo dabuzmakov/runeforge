@@ -64,7 +64,7 @@ public sealed class BuildSelectionState
 
     public List<RuneType> SelectedRunes { get; } = new(BuildSize);
 
-    public Dictionary<RuneType, float> OptionHoverAmounts { get; } = RuneCatalog.AllTypes.ToDictionary(static runeType => runeType, static _ => 0f);
+    public Dictionary<RuneType, float> OptionHoverAmounts { get; } = RuneDatabase.AllTypes.ToDictionary(static runeType => runeType, static _ => 0f);
 
     public bool IsOpen { get; set; } = true;
 

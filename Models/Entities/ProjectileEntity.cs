@@ -9,7 +9,7 @@ public sealed class ProjectileEntity
     public ProjectileEntity(
         Vector2 position,
         EnemyEntity target,
-        RuneConfig sourceRune,
+        RuneData sourceRune,
         float damage,
         Color? colorOverride = null)
     {

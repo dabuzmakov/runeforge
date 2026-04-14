@@ -1,39 +1,73 @@
 using runeforge.Factories;
 using runeforge.Models;
+using runeforge.Runes;
 
 namespace runeforge.Systems;
 
 public sealed class RuneCombatSystem
 {
     private readonly ProjectileFactory _projectileFactory;
+    private readonly SowiloBeamSystem _sowiloBeamSystem;
 
-    public RuneCombatSystem(ProjectileFactory projectileFactory)
+    public RuneCombatSystem(ProjectileFactory projectileFactory, SowiloBeamSystem sowiloBeamSystem)
     {
         _projectileFactory = projectileFactory;
+        _sowiloBeamSystem = sowiloBeamSystem;
     }
 
-    public void Update(GameState gameState, float deltaTime)
+    public void Update(
+        GameState gameState,
+        IReadOnlyList<System.Numerics.Vector2> path,
+        float pathLength,
+        float deltaTime,
+        RuneEffectSystem runeEffectSystem)
     {
+        var context = new RuneCombatContext(
+            gameState,
+            path,
+            pathLength,
+            _projectileFactory,
+            _sowiloBeamSystem,
+            runeEffectSystem);
+
         for (var i = 0; i < gameState.Runes.Count; i++)
         {
             var rune = gameState.Runes[i];
+            var behavior = RuneBehaviorRegistry.Get(rune.Stats.Type);
             rune.Cooldown.Remaining -= deltaTime;
+            rune.EffectCooldown.Remaining -= deltaTime;
 
-            if (!rune.Cooldown.IsReady || !rune.Presentation.IsCombatActive)
+            if (!rune.Presentation.IsCombatActive)
             {
                 continue;
             }
 
-            var target = SelectLeadingEnemy(gameState.Enemies);
-            if (target == null)
+            var didActivatePeriodicEffect = false;
+            if (rune.EffectCooldown.IsReady && behavior.TryActivatePeriodicEffect(context, rune))
             {
-                continue;
+                rune.EffectCooldown.Remaining = behavior.GetEffectCooldown(rune);
+                didActivatePeriodicEffect = true;
             }
 
-            gameState.Projectiles.Add(_projectileFactory.CreateFromRune(rune, target));
+            var didFireAutoAttack = false;
+            if (rune.Cooldown.IsReady)
+            {
+                var target = SelectLeadingEnemy(gameState.Enemies);
+                if (target != null)
+                {
+                    didFireAutoAttack = behavior.TryPerformAttack(context, rune, target);
+                    if (didFireAutoAttack)
+                    {
+                        rune.SpecialAttack.RegisterAttack();
+                        rune.Cooldown.Remaining = behavior.GetAttackInterval(rune);
+                    }
+                }
+            }
 
-            rune.Cooldown.Remaining = rune.Data.AttackRate;
-            rune.Presentation.TriggerAttackPulse();
+            if (didActivatePeriodicEffect || didFireAutoAttack)
+            {
+                rune.Presentation.TriggerAttackPulse();
+            }
         }
     }
 

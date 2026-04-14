@@ -4,10 +4,19 @@ public static class EnemyCatalog
 {
     private static readonly IReadOnlyDictionary<EnemyType, EnemyConfig> Configs = new Dictionary<EnemyType, EnemyConfig>
     {
-        { EnemyType.Basic, new EnemyConfig(EnemyType.Basic, speed: 30f, baseHealth: 20f, radius: 16f) }
+        { EnemyType.Normal, new EnemyConfig(EnemyType.Normal, "Normal", speed: 36f, baseHealth: 12f, radius: 20f, shape: EnemyShape.Circle) },
+        { EnemyType.Fast, new EnemyConfig(EnemyType.Fast, "Fast", speed: 62f, baseHealth: 8f, radius: 14f, shape: EnemyShape.Circle) },
+        { EnemyType.Slow, new EnemyConfig(EnemyType.Slow, "Slow", speed: 25f, baseHealth: 22f, radius: 24f, shape: EnemyShape.Square) }
     };
 
-    public static EnemyConfig Default => Get(EnemyType.Basic);
+    public static IReadOnlyList<EnemyType> AllTypes { get; } =
+    [
+        EnemyType.Normal,
+        EnemyType.Fast,
+        EnemyType.Slow
+    ];
+
+    public static EnemyConfig Default => Get(EnemyType.Normal);
 
     public static EnemyConfig Get(EnemyType type)
     {

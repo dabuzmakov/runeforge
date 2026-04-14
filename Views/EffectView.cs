@@ -25,11 +25,31 @@ public sealed class EffectView : IDisposable
             return;
         }
 
+        Draw(graphics, effect.Definition, effect.RowIndex, effect.Position, effect.Scale, effect.CurrentFrameIndex);
+    }
+
+    public void Draw(
+        Graphics graphics,
+        SpriteSheetEffectDefinition definition,
+        int rowIndex,
+        Vector2 position,
+        float scale,
+        int frameIndex)
+    {
+        if (!_textures.TryGetValue(definition.Type, out var texture))
+        {
+            return;
+        }
+
+        var clampedFrameIndex = definition.FrameCount <= 0
+            ? 0
+            : ((frameIndex % definition.FrameCount) + definition.FrameCount) % definition.FrameCount;
+
         var sourceRectangle = new Rectangle(
-            effect.CurrentFrameIndex * effect.Definition.FrameWidth,
-            effect.RowIndex * effect.Definition.FrameHeight,
-            effect.Definition.FrameWidth,
-            effect.Definition.FrameHeight);
+            clampedFrameIndex * definition.FrameWidth,
+            rowIndex * definition.FrameHeight,
+            definition.FrameWidth,
+            definition.FrameHeight);
 
         if (sourceRectangle.Right > texture.Width || sourceRectangle.Bottom > texture.Height)
         {
@@ -37,10 +57,10 @@ public sealed class EffectView : IDisposable
         }
 
         var destinationRectangle = CreateDestinationRectangle(
-            effect.Position,
-            effect.Definition.FrameWidth,
-            effect.Definition.FrameHeight,
-            effect.Scale);
+            position,
+            definition.FrameWidth,
+            definition.FrameHeight,
+            scale);
 
         graphics.DrawImage(texture, destinationRectangle, sourceRectangle, GraphicsUnit.Pixel);
     }
