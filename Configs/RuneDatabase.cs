@@ -7,7 +7,7 @@ public static class RuneDatabase
 {
     private const float DefaultAttackRate = 0.8f;
     private const float DefaultDamage = 1f;
-    private const float DefaultProjectileSpeed = 600f;
+    private const float DefaultProjectileSpeed = 780f;
     private const float DefaultProjectileRadius = 7f;
     private const float DefaultRuneRadius = 22f;
 
@@ -42,36 +42,50 @@ public static class RuneDatabase
     {
         var entries = new Dictionary<RuneType, RuneData>();
 
-        Add(entries, RuneType.Kenaz, RuneColor.Blue, baseAttackRate: 0.78f, baseDamage: 0.98f, effectType: RuneEffectType.KenazSplash, effectPower: KenazTuning.SplashDamageMultiplier);
-        Add(entries, RuneType.Eiwaz, RuneColor.Blue);
+        Add(entries, RuneType.Kenaz, RuneColor.Blue, baseAttackRate: 0.78f, baseDamage: 0.98f);
+        Add(
+            entries,
+            RuneType.Eiwaz,
+            RuneColor.Blue,
+            baseAttackRate: EiwazTuning.AimDurationSeconds,
+            baseDamage: EiwazTuning.BaseDamage,
+            projectileSpeed: EiwazTuning.ProjectileSpeed,
+            projectileRadius: EiwazTuning.ProjectileRadius);
         Add(entries, RuneType.Mannaz, RuneColor.Blue);
 
         Add(entries, RuneType.Fehu, RuneColor.Red);
         Add(entries, RuneType.Wunjo, RuneColor.Red);
-        Add(entries, RuneType.Algiz, RuneColor.Red);
+        Add(entries, RuneType.Algiz, RuneColor.Red, baseAttackRate: AlgizTuning.AttackIntervalSeconds, baseDamage: 1.8f);
         Add(entries, RuneType.Ingwaz, RuneColor.Red);
 
         Add(entries, RuneType.Ansuz, RuneColor.Green);
-        Add(entries, RuneType.Isa, RuneColor.Green, baseAttackRate: 0.82f, baseDamage: 1.08f, effectType: RuneEffectType.IsaSlow, effectPower: 1f);
-        Add(entries, RuneType.Berkano, RuneColor.Green);
+        Add(entries, RuneType.Isa, RuneColor.Green, baseAttackRate: 0.82f, baseDamage: 1.08f);
+        Add(entries, RuneType.Berkano, RuneColor.Green, baseAttackRate: 0.76f, baseDamage: 0.88f);
 
         Add(entries, RuneType.Raidho, RuneColor.Cyan, baseAttackRate: 0.72f, baseDamage: 0.92f);
         Add(entries, RuneType.Jera, RuneColor.Cyan);
         Add(entries, RuneType.Ehwaz, RuneColor.Cyan);
 
-        Add(entries, RuneType.Uruz, RuneColor.Orange);
-        Add(entries, RuneType.Hagalaz, RuneColor.Orange);
+        Add(entries, RuneType.Uruz, RuneColor.Orange, baseAttackRate: UruzTuning.BaseAttackIntervalSeconds, baseDamage: UruzTuning.BaseDamage);
+        Add(entries, RuneType.Hagalaz, RuneColor.Orange, baseAttackRate: 0.64f, baseDamage: 0.62f);
         Add(entries, RuneType.Sowilo, RuneColor.Orange, baseAttackRate: 0.78f, baseDamage: 0.92f);
         Add(entries, RuneType.Dagaz, RuneColor.Orange);
 
-        Add(entries, RuneType.Thurisaz, RuneColor.Yellow);
+        Add(
+            entries,
+            RuneType.Thurisaz,
+            RuneColor.Yellow,
+            baseAttackRate: ThurisazTuning.ChargeDurationSeconds,
+            baseDamage: ThurisazTuning.BaseDamage,
+            projectileSpeed: ThurisazTuning.ProjectileSpeed,
+            projectileRadius: ThurisazTuning.ProjectileRadius);
         Add(entries, RuneType.Nauthiz, RuneColor.Yellow);
         Add(entries, RuneType.Tiwaz, RuneColor.Yellow);
         Add(entries, RuneType.Othala, RuneColor.Yellow);
 
         Add(entries, RuneType.Gebo, RuneColor.Purple, baseAttackRate: 0.82f, baseDamage: 0.78f);
         Add(entries, RuneType.Perthro, RuneColor.Purple);
-        Add(entries, RuneType.Laguz, RuneColor.Purple);
+        Add(entries, RuneType.Laguz, RuneColor.Purple, baseAttackRate: LaguzTuning.CooldownSeconds, baseDamage: 0f);
 
         return entries;
     }
@@ -82,8 +96,8 @@ public static class RuneDatabase
         RuneColor color,
         float? baseAttackRate = null,
         float? baseDamage = null,
-        RuneEffectType effectType = RuneEffectType.None,
-        float effectPower = 0f)
+        float? projectileSpeed = null,
+        float? projectileRadius = null)
     {
         entries.Add(type, new RuneData(
             type,
@@ -92,10 +106,8 @@ public static class RuneDatabase
             baseAttackRate ?? DefaultAttackRate,
             baseDamage ?? DefaultDamage,
             ProjectileColors[color],
-            DefaultProjectileSpeed,
-            DefaultProjectileRadius,
-            DefaultRuneRadius,
-            effectType,
-            effectPower));
+            projectileSpeed ?? DefaultProjectileSpeed,
+            projectileRadius ?? DefaultProjectileRadius,
+            DefaultRuneRadius));
     }
 }

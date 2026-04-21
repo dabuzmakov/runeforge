@@ -79,6 +79,14 @@ public sealed class GameUiState
 
     public Vector2 DraggedRunePosition { get; set; }
 
+    public Vector2 DraggedRuneGrabOffset { get; set; }
+
+    public bool IsHagalazPathPreviewVisible { get; set; }
+
+    public Vector2[] HagalazPathPreviewPoints { get; set; } = [];
+
+    public Vector2 HagalazPathPreviewCenter { get; set; }
+
     public bool UseOpenBagSprite { get; set; }
 
     public float BagScale { get; set; } = 1f;

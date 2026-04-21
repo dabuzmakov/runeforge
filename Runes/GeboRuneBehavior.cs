@@ -5,6 +5,11 @@ namespace runeforge.Runes;
 
 public sealed class GeboRuneBehavior : RuneBehavior
 {
+    public override bool TryPerformAttack(RuneCombatContext context, RuneEntity rune, EnemyEntity target)
+    {
+        return false;
+    }
+
     public override void UpdatePassive(RunePassiveContext context, RuneEntity rune, float deltaTime)
     {
         if (!rune.Presentation.IsCombatActive)

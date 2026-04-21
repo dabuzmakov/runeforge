@@ -2,10 +2,14 @@ namespace runeforge.Models;
 
 public enum EnemyStatusEffectType
 {
-    MovementSlow
+    IsaSlow,
+    LaguzSlow,
+    Poison
 }
 
 public readonly record struct EnemyStatusEffect(
     EnemyStatusEffectType Type,
     float Strength,
-    float RemainingDurationSeconds);
+    float RemainingDurationSeconds,
+    float TriggerIntervalSeconds,
+    float TimeUntilNextTriggerSeconds);

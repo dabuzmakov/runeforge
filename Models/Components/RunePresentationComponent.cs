@@ -15,6 +15,9 @@ public sealed class RunePresentationComponent
     private const float AttackPulseDuration = 0.13f;
     private const float AttackPulseScale = 0.12f;
     private const float AttackPulseChargeRatio = 0.62f;
+    private const float AttackPulseMinScaleMultiplier = 0.35f;
+    private const float AttackPulseMaxReferenceInterval = 0.8f;
+    private const float AttackPulseMinReferenceInterval = 0.18f;
     private const float MergePopDuration = 0.14f;
     private const float MergePopScale = 0.15f;
     private const float MergePopChargeRatio = 0.45f;
@@ -67,9 +70,12 @@ public sealed class RunePresentationComponent
 
     public bool IsTransientAnimationComplete => _actionState != RuneActionState.Idle && _actionElapsed >= _actionDuration;
 
-    public void TriggerAttackPulse()
+    public void TriggerAttackPulse(float attackIntervalSeconds)
     {
-        StartPulse(AttackPulseDuration, AttackPulseScale, AttackPulseChargeRatio);
+        StartPulse(
+            AttackPulseDuration,
+            AttackPulseScale * GetAttackPulseScaleMultiplier(attackIntervalSeconds),
+            AttackPulseChargeRatio);
     }
 
     public void TriggerMergePop()
@@ -217,6 +223,20 @@ public sealed class RunePresentationComponent
     private float GetActionProgress()
     {
         return _actionDuration <= 0f ? 1f : Math.Clamp(_actionElapsed / _actionDuration, 0f, 1f);
+    }
+
+    private static float GetAttackPulseScaleMultiplier(float attackIntervalSeconds)
+    {
+        var clampedInterval = Math.Clamp(
+            attackIntervalSeconds,
+            AttackPulseMinReferenceInterval,
+            AttackPulseMaxReferenceInterval);
+        var normalizedInterval =
+            (clampedInterval - AttackPulseMinReferenceInterval) /
+            (AttackPulseMaxReferenceInterval - AttackPulseMinReferenceInterval);
+
+        return AttackPulseMinScaleMultiplier +
+            ((1f - AttackPulseMinScaleMultiplier) * normalizedInterval);
     }
 
     private static float Approach(float value, float target, float step)

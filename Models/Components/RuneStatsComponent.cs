@@ -21,9 +21,15 @@ public sealed class RuneStatsComponent
 
     public string TextureKey => RuneData.TextureKey;
 
-    public float AttackRate => RuneData.BaseAttackRate / (1f + ((Tier - 1) * 0.1f));
+    public float AttackRate => RuneData.BaseAttackRate / RuneTierTuning.GetAttackIntervalDivisor(Tier);
 
-    public float Damage => RuneData.BaseDamage * Tier;
+    public float Damage => RuneData.BaseDamage * RuneTierTuning.GetDamageMultiplier(Tier) * RuneCombatTuning.GlobalDamageMultiplier;
+
+    public float CriticalHitChance => Math.Clamp(
+        RuneCombatTuning.DefaultCriticalHitChance +
+        ((Tier - 1) * RuneCombatTuning.CriticalHitChancePerTier),
+        0f,
+        1f);
 
     public Color ProjectileColor => RuneData.ProjectileColor;
 
@@ -32,8 +38,4 @@ public sealed class RuneStatsComponent
     public float ProjectileRadius => RuneData.ProjectileRadius;
 
     public float Radius => RuneData.RuneRadius;
-
-    public RuneEffectType EffectType => RuneData.EffectType;
-
-    public float EffectPower => RuneData.EffectPower;
 }

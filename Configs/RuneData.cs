@@ -14,9 +14,7 @@ public sealed class RuneData
         Color projectileColor,
         float projectileSpeed,
         float projectileRadius,
-        float runeRadius,
-        RuneEffectType effectType,
-        float effectPower)
+        float runeRadius)
     {
         Type = type;
         Color = color;
@@ -27,8 +25,6 @@ public sealed class RuneData
         ProjectileSpeed = projectileSpeed;
         ProjectileRadius = projectileRadius;
         RuneRadius = runeRadius;
-        EffectType = effectType;
-        EffectPower = effectPower;
     }
 
     public RuneType Type { get; }
@@ -48,8 +44,4 @@ public sealed class RuneData
     public float ProjectileRadius { get; }
 
     public float RuneRadius { get; }
-
-    public RuneEffectType EffectType { get; }
-
-    public float EffectPower { get; }
 }

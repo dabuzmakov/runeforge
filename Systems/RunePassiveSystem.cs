@@ -13,6 +13,7 @@ public sealed class RunePassiveSystem
         for (var i = 0; i < gameState.Runes.Count; i++)
         {
             var rune = gameState.Runes[i];
+            rune.State.Update(rune.Stats, deltaTime);
             RuneBehaviorRegistry.Get(rune.Stats.Type).UpdatePassive(context, rune, deltaTime);
         }
     }

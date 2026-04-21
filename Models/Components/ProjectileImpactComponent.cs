@@ -7,25 +7,32 @@ public sealed class ProjectileImpactComponent
 {
     public ProjectileImpactComponent(
         RuneType sourceRuneType,
-        RuneEffectType effectType,
-        float effectPower,
+        int sourceRuneTier,
+        float effectDamageMultiplier,
+        float baseDamage,
         float damage,
+        bool isCriticalHit,
         Color color)
     {
         SourceRuneType = sourceRuneType;
-        EffectType = effectType;
-        EffectPower = effectPower;
+        SourceRuneTier = sourceRuneTier;
+        EffectDamageMultiplier = effectDamageMultiplier;
+        BaseDamage = baseDamage;
         Damage = damage;
+        IsCriticalHit = isCriticalHit;
         Color = color;
     }
-
     public RuneType SourceRuneType { get; }
 
-    public RuneEffectType EffectType { get; }
+    public int SourceRuneTier { get; }
 
-    public float EffectPower { get; }
+    public float EffectDamageMultiplier { get; }
+
+    public float BaseDamage { get; }
 
     public float Damage { get; }
+
+    public bool IsCriticalHit { get; }
 
     public Color Color { get; }
 }

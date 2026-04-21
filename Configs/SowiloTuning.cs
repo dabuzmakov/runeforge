@@ -15,14 +15,9 @@ public static class SowiloTuning
     private static readonly float[] BeamDamageByTier =
     [
         2.0f,
-        4.2f,
         6.6f,
-        9.2f,
         12.0f,
-        15.0f,
         18.2f,
-        21.6f,
-        25.2f,
         29.0f
     ];
 
@@ -31,7 +26,7 @@ public static class SowiloTuning
     public static float GetBeamDamage(int tier)
     {
         var clampedTier = RuneTierTuning.Clamp(tier);
-        return BeamDamageByTier[clampedTier - 1];
+        return BeamDamageByTier[clampedTier - 1] * RuneCombatTuning.GlobalDamageMultiplier;
     }
 
     public static float GetHitThreshold(float enemyRadius, EnemyShape enemyShape)

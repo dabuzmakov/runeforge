@@ -4,6 +4,8 @@ namespace runeforge.Models;
 
 public sealed class EnemyDataComponent
 {
+    public event Action<float, bool>? DamageTaken;
+
     public EnemyDataComponent(EnemyConfig config, int tier)
     {
         Config = config;
@@ -29,14 +31,17 @@ public sealed class EnemyDataComponent
 
     public bool IsAlive { get; private set; }
 
-    public void TakeDamage(float damage)
+    public bool IsUruzMarked { get; private set; }
+
+    public void TakeDamage(float damage, bool isCriticalHit = false)
     {
         if (!IsAlive)
         {
             return;
         }
 
-        Health -= damage;
+        DamageTaken?.Invoke(damage, isCriticalHit);
+        Health = MathF.Max(0f, Health - damage);
         if (Health <= 0f)
         {
             IsAlive = false;
@@ -46,5 +51,15 @@ public sealed class EnemyDataComponent
     public void MarkDead()
     {
         IsAlive = false;
+    }
+
+    public void ApplyUruzMark()
+    {
+        IsUruzMarked = true;
+    }
+
+    public void ClearUruzMark()
+    {
+        IsUruzMarked = false;
     }
 }

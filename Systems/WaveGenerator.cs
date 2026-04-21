@@ -53,9 +53,6 @@ public sealed class WaveGenerator
         IReadOnlyDictionary<EnemyType, float> archetypeWeights,
         int highestUnlockedTier)
     {
-        // Budget grows linearly by wave. Count is derived from the average cost of
-        // the intended archetype mix plus the intended tier mix, which keeps
-        // progression readable and avoids exponential spikes.
         var waveBudget = _tuning.BaseWaveBudget + ((waveNumber - 1) * _tuning.WaveBudgetGrowth);
         var tierWeights = BuildTierWeights(highestUnlockedTier);
         var weightedAverageTierCost = CalculateWeightedAverageTierCost(tierWeights);
@@ -71,8 +68,6 @@ public sealed class WaveGenerator
 
     private Dictionary<int, float> BuildTierWeights(int highestUnlockedTier)
     {
-        // Waves unlock a higher max tier in steps, but each wave still keeps a mix
-        // of recent lower tiers so scaling stays legible and easy to tune.
         var oldestTier = Math.Max(1, highestUnlockedTier - (_tuning.TierHistoryDepth - 1));
         var weights = new Dictionary<int, float>();
 

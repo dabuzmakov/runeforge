@@ -18,6 +18,11 @@ public abstract class RuneBehavior : IRuneBehavior
         return GetAttackInterval(rune);
     }
 
+    public virtual bool ShouldConsumeEffectCooldownOnAttempt(RuneEntity rune)
+    {
+        return false;
+    }
+
     public virtual bool TryActivatePeriodicEffect(RuneCombatContext context, RuneEntity rune)
     {
         return false;

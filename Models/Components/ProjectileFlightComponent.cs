@@ -24,11 +24,13 @@ public sealed class ProjectileFlightComponent
         State = ProjectileState.Active;
     }
 
-    public EnemyEntity Target { get; }
+    public EnemyEntity Target { get; private set; }
 
     public float Speed { get; }
 
     public float Radius { get; }
+
+    public bool CanRetargetLeadingEnemy { get; init; }
 
     public ProjectileState State { get; private set; }
 
@@ -102,6 +104,17 @@ public sealed class ProjectileFlightComponent
     public void ClearHitTarget()
     {
         HitTarget = null;
+    }
+
+    public bool TryRetarget(EnemyEntity newTarget)
+    {
+        if (State != ProjectileState.Active || !newTarget.Data.IsAlive || newTarget.Path.HasReachedGoal)
+        {
+            return false;
+        }
+
+        Target = newTarget;
+        return true;
     }
 
     private void StartBurst()

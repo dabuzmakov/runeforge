@@ -1,6 +1,6 @@
 namespace runeforge.Configs;
 
-public static class RaidoTuning
+public static class RaidhoTuning
 {
     public const int OverloadEffectRowIndex = 2;
     public const float OverloadIntervalSeconds = 5f;
@@ -8,44 +8,29 @@ public static class RaidoTuning
 
     private static readonly float[] BaseAttackIntervalSecondsByTier =
     [
-        0.72f,
-        0.70f,
-        0.68f,
-        0.66f,
-        0.64f,
-        0.62f,
-        0.60f,
-        0.58f,
-        0.56f,
-        0.54f
+        0.5f,
+        0.45f,
+        0.40f,
+        0.35f,
+        0.30f
     ];
 
     private static readonly float[] OverloadDurationSecondsByTier =
     [
-        2.0f,
         3.0f,
-        4.0f,
         5.0f,
-        6.0f,
         7.0f,
-        8.0f,
         9.0f,
-        10.0f,
         11.0f
     ];
 
     private static readonly float[] OverloadAttackSpeedMultiplierByTier =
     [
-        1.70f,
-        1.75f,
-        1.80f,
-        1.85f,
-        1.90f,
-        1.95f,
-        2.00f,
-        2.05f,
-        2.10f,
-        2.15f
+        2.0f,
+        2.5f,
+        3.0f,
+        3.5f,
+        4.0f
     ];
 
     public static float GetBaseAttackIntervalSeconds(int tier)

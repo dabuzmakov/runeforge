@@ -8,11 +8,23 @@ public sealed class GameState
 
     public List<EnemyEntity> Enemies { get; } = new(32);
 
+    public List<AnsuzAllyEntity> AnsuzAllies { get; } = new(24);
+
     public List<RuneEntity> Runes { get; } = new(16);
 
     public List<ProjectileEntity> Projectiles { get; } = new(64);
 
+    public List<LaguzOrbEntity> LaguzOrbs { get; } = new(16);
+
+    public List<LaguzBlackHoleEntity> LaguzBlackHoles { get; } = new(16);
+
     public List<SowiloBeamInstance> SowiloBeams { get; } = new(16);
+
+    public List<UruzTornadoEntity> UruzTornadoes { get; } = new(12);
+
+    public List<EhwazChainLinkInstance> EhwazChainLinks { get; } = new(32);
+
+    public List<DamagePopupInstance> DamagePopups { get; } = new(64);
 
     public List<AnimatedEffect> VisualEffects { get; } = new(32);
 

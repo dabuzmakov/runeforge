@@ -9,11 +9,13 @@ public sealed class EnemySystem
 {
     private readonly EnemyFactory _enemyFactory;
     private readonly WaveGenerator _waveGenerator;
+    private readonly DamagePopupSystem _damagePopupSystem;
 
-    public EnemySystem(EnemyFactory enemyFactory, WaveGenerator waveGenerator)
+    public EnemySystem(EnemyFactory enemyFactory, WaveGenerator waveGenerator, DamagePopupSystem damagePopupSystem)
     {
         _enemyFactory = enemyFactory;
         _waveGenerator = waveGenerator;
+        _damagePopupSystem = damagePopupSystem;
     }
 
     public void Update(GameState gameState, IReadOnlyList<Vector2> path, float deltaTime)
@@ -52,15 +54,28 @@ public sealed class EnemySystem
     {
         foreach (var enemy in gameState.Enemies)
         {
+            enemy.UpdatePresentation(deltaTime);
+
             if (!enemy.Data.IsAlive)
             {
                 continue;
             }
 
-            enemy.StatusEffects.Update(deltaTime);
+            var poisonDamage = enemy.StatusEffects.Update(deltaTime);
+            if (poisonDamage > 0f)
+            {
+                var modifiedPoisonDamage = enemy.StatusEffects.ApplyIncomingDamageMultiplier(poisonDamage);
+                _damagePopupSystem.Spawn(gameState, enemy, modifiedPoisonDamage, DamagePopupStyle.Poison);
+                enemy.Data.TakeDamage(modifiedPoisonDamage);
+                if (!enemy.Data.IsAlive)
+                {
+                    continue;
+                }
+            }
 
             var effectiveSpeed = enemy.Data.Speed * enemy.StatusEffects.MovementSpeedMultiplier;
             enemy.Path.Update(enemy.Transform, effectiveSpeed, deltaTime, path);
+            enemy.SyncMovementVelocity(deltaTime);
             if (enemy.Path.HasReachedGoal)
             {
                 gameState.EscapedEnemyCount++;

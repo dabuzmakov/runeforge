@@ -10,6 +10,8 @@ public interface IRuneBehavior
 
     float GetEffectCooldown(RuneEntity rune);
 
+    bool ShouldConsumeEffectCooldownOnAttempt(RuneEntity rune);
+
     bool TryActivatePeriodicEffect(RuneCombatContext context, RuneEntity rune);
 
     bool TryPerformAttack(RuneCombatContext context, RuneEntity rune, EnemyEntity target);

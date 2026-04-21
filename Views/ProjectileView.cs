@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using runeforge.Configs;
 using runeforge.Models;
 
 namespace runeforge.Views;
@@ -8,14 +10,34 @@ public sealed class ProjectileView : IDisposable
     private const int BurstFragmentCount = 4;
     private const float BurstRadiusMultiplier = 3.1f;
 
+    private readonly IReadOnlyList<Bitmap> _thurisazFrames;
+    private readonly Bitmap? _eiwazProjectileTexture;
     private readonly Dictionary<int, SolidBrush> _brushCache = new();
     private readonly SolidBrush _fragmentBrush = new(Color.White);
+
+    public ProjectileView(IReadOnlyList<Bitmap> thurisazFrames, Bitmap? eiwazProjectileTexture)
+    {
+        _thurisazFrames = thurisazFrames;
+        _eiwazProjectileTexture = eiwazProjectileTexture;
+    }
 
     public void Draw(Graphics graphics, ProjectileEntity projectile)
     {
         if (projectile.Flight.IsBursting)
         {
             DrawBurst(graphics, projectile);
+            return;
+        }
+
+        if (projectile.Impact.SourceRuneType == RuneType.Thurisaz)
+        {
+            DrawThurisazFireball(graphics, projectile);
+            return;
+        }
+
+        if (projectile.Impact.SourceRuneType == RuneType.Eiwaz)
+        {
+            DrawEiwazProjectile(graphics, projectile);
             return;
         }
 
@@ -33,11 +55,54 @@ public sealed class ProjectileView : IDisposable
     public void Dispose()
     {
         _fragmentBrush.Dispose();
+        _eiwazProjectileTexture?.Dispose();
 
         foreach (var brush in _brushCache.Values)
         {
             brush.Dispose();
         }
+    }
+
+    private void DrawThurisazFireball(Graphics graphics, ProjectileEntity projectile)
+    {
+        if (_thurisazFrames.Count == 0)
+        {
+            var brush = GetBrush(projectile.Impact.Color);
+            var diameter = projectile.Flight.Radius * 2f;
+            graphics.FillEllipse(
+                brush,
+                projectile.Transform.Position.X - projectile.Flight.Radius,
+                projectile.Transform.Position.Y - projectile.Flight.Radius,
+                diameter,
+                diameter);
+            return;
+        }
+
+        var frameIndex = GetAnimationFrameIndex(_thurisazFrames.Count, ThurisazTuning.AnimationFrameDurationSeconds);
+        var frame = _thurisazFrames[frameIndex];
+        var size = projectile.Flight.Radius * 2f * ThurisazTuning.VisualScaleMultiplier;
+        var rotationRadians = GetProjectileRotation(projectile);
+        DrawRotatedTexture(graphics, frame, projectile.Transform.Position, rotationRadians, size, size);
+    }
+
+    private void DrawEiwazProjectile(Graphics graphics, ProjectileEntity projectile)
+    {
+        if (_eiwazProjectileTexture == null)
+        {
+            var brush = GetBrush(projectile.Impact.Color);
+            var diameter = projectile.Flight.Radius * 2f;
+            graphics.FillEllipse(
+                brush,
+                projectile.Transform.Position.X - projectile.Flight.Radius,
+                projectile.Transform.Position.Y - projectile.Flight.Radius,
+                diameter,
+                diameter);
+            return;
+        }
+
+        var size = projectile.Flight.Radius * 2f * EiwazTuning.ProjectileVisualScaleMultiplier;
+        var rotationRadians = GetProjectileRotation(projectile);
+        DrawRotatedTexture(graphics, _eiwazProjectileTexture, projectile.Transform.Position, rotationRadians, size, size);
     }
 
     private void DrawBurst(Graphics graphics, ProjectileEntity projectile)
@@ -83,5 +148,47 @@ public sealed class ProjectileView : IDisposable
         brush = new SolidBrush(color);
         _brushCache.Add(key, brush);
         return brush;
+    }
+
+    private static int GetAnimationFrameIndex(int frameCount, float frameDurationSeconds)
+    {
+        if (frameCount <= 1)
+        {
+            return 0;
+        }
+
+        var totalElapsedSeconds = Environment.TickCount64 / 1000d;
+        return (int)(totalElapsedSeconds / frameDurationSeconds) % frameCount;
+    }
+
+    private static float GetProjectileRotation(ProjectileEntity projectile)
+    {
+        var direction = projectile.Flight.Target.Transform.Position - projectile.Transform.Position;
+        if (direction.LengthSquared() <= 0.001f)
+        {
+            return 0f;
+        }
+
+        return MathF.Atan2(direction.Y, direction.X);
+    }
+
+    private static void DrawRotatedTexture(
+        Graphics graphics,
+        Bitmap texture,
+        System.Numerics.Vector2 center,
+        float rotationRadians,
+        float sizeWidth,
+        float sizeHeight)
+    {
+        GraphicsState state = graphics.Save();
+        graphics.TranslateTransform(center.X, center.Y);
+        graphics.RotateTransform(rotationRadians * (180f / MathF.PI));
+        graphics.DrawImage(
+            texture,
+            -(sizeWidth * 0.5f),
+            -(sizeHeight * 0.5f),
+            sizeWidth,
+            sizeHeight);
+        graphics.Restore(state);
     }
 }

@@ -10,6 +10,25 @@ public sealed class PathFollowComponent
 
     public bool HasReachedGoal { get; private set; }
 
+    public void SyncToClosestPathPosition(Vector2 position, IReadOnlyList<Vector2> path)
+    {
+        if (HasReachedGoal || path.Count < 2)
+        {
+            return;
+        }
+
+        var closestPoint = PathGeometry.GetClosestPointResult(path, position);
+        Progress = Math.Max(0f, closestPoint.PathDistance);
+
+        var nextPathPointIndex = closestPoint.SegmentIndex + 1;
+        if (Vector2.DistanceSquared(closestPoint.Point, closestPoint.SegmentEnd) <= 0.001f)
+        {
+            nextPathPointIndex++;
+        }
+
+        NextPathPointIndex = Math.Clamp(nextPathPointIndex, 1, path.Count - 1);
+    }
+
     public void Update(TransformComponent transform, float speed, float deltaTime, IReadOnlyList<Vector2> path)
     {
         if (HasReachedGoal || path.Count < 2)
