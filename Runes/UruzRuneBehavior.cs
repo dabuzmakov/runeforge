@@ -33,15 +33,12 @@ public sealed class UruzRuneBehavior : RuneBehavior
 
     public override bool TryPerformAttack(RuneCombatContext context, RuneEntity rune, EnemyEntity target)
     {
-        var availableTargets = context.GameState.Enemies
-            .Where(static enemy => enemy.Data.IsAlive && !enemy.Path.HasReachedGoal)
-            .ToArray();
-        if (availableTargets.Length == 0)
+        var randomTarget = EnemyQuery.SelectRandomTargetableEnemy(context.GameState.Enemies);
+        if (randomTarget == null)
         {
             return false;
         }
 
-        var randomTarget = availableTargets[Random.Shared.Next(availableTargets.Length)];
         context.SpawnProjectile(rune, randomTarget);
         return true;
     }

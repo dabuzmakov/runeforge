@@ -2,8 +2,8 @@ namespace runeforge.Configs;
 
 public static class EnemyBalance
 {
-    public const float GlobalHealthMultiplier = 2f;
-    public const float HealthPerTierStep = 0.24f;
+    public const float GlobalHealthMultiplier = 10f;
+    public const float HealthPerTierStep = 0.31f;
 
     public static float CalculateHealth(EnemyConfig archetype, int tier)
     {

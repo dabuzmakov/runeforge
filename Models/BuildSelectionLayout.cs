@@ -7,16 +7,12 @@ public readonly record struct RuneOptionLayout(RuneType RuneType, Rectangle Card
 public static class BuildSelectionLayout
 {
     private const int Columns = 6;
-    private const int CardWidth = 86;
-    private const int CardHeight = 112;
+    private const int CardWidth = 88;
+    private const int CardHeight = 116;
     private const int SlotSize = 62;
-    private const int SlotGap = 12;
+    private const int SlotGap = 16;
     private const int SelectedSlotSize = 70;
-    private const int SelectedSlotGap = 12;
-    private const int InGameSlotSize = 52;
-    private const int InGameSlotGap = 10;
-    private const int InGamePanelPaddingX = 14;
-    private const int InGamePanelPaddingY = 14;
+    private const int SelectedSlotGap = 18;
 
     public static Rectangle GetOverlayPanel(Rectangle viewport)
     {
@@ -35,7 +31,7 @@ public static class BuildSelectionLayout
         var panel = GetOverlayPanel(viewport);
         var gridWidth = (Columns * CardWidth) + ((Columns - 1) * SlotGap);
         var startX = panel.Left + ((panel.Width - gridWidth) / 2);
-        var startY = panel.Top + 170;
+        var startY = panel.Top + 184;
         var layouts = new List<RuneOptionLayout>(RuneDatabase.AllTypes.Count);
 
         for (var i = 0; i < RuneDatabase.AllTypes.Count; i++)
@@ -71,7 +67,7 @@ public static class BuildSelectionLayout
         const int buttonHeight = 70;
         return new Rectangle(
             panel.Left + ((panel.Width - buttonWidth) / 2),
-            panel.Bottom - 110,
+            panel.Bottom - 88,
             buttonWidth,
             buttonHeight);
     }
@@ -82,28 +78,21 @@ public static class BuildSelectionLayout
         var totalWidth = (BuildSelectionState.BuildSize * SelectedSlotSize) + ((BuildSelectionState.BuildSize - 1) * SelectedSlotGap);
         return CreateSelectedBuildSlots(
             panel.Left + ((panel.Width - totalWidth) / 2),
-            panel.Top + 54,
+            panel.Top + 57,
             SelectedSlotSize,
             SelectedSlotGap);
     }
 
-    public static IReadOnlyList<Rectangle> CreateInGameBuildSlots(Rectangle viewport)
+    public static Rectangle GetSelectedBuildFrameBounds(Rectangle viewport)
     {
-        var panel = GetInGameBuildPanel(viewport);
-        var totalWidth = (BuildSelectionState.BuildSize * InGameSlotSize) + ((BuildSelectionState.BuildSize - 1) * InGameSlotGap);
-        return CreateSelectedBuildSlots(
-            panel.Left + ((panel.Width - totalWidth) / 2),
-            panel.Top + InGamePanelPaddingY,
-            InGameSlotSize,
-            InGameSlotGap);
-    }
-
-    public static Rectangle GetInGameBuildPanel(Rectangle viewport)
-    {
-        var totalWidth = (BuildSelectionState.BuildSize * InGameSlotSize) + ((BuildSelectionState.BuildSize - 1) * InGameSlotGap);
-        var panelWidth = totalWidth + (InGamePanelPaddingX * 2);
-        var panelHeight = InGameSlotSize + (InGamePanelPaddingY * 2);
-        return new Rectangle(viewport.Right - panelWidth - 24, 18, panelWidth, panelHeight);
+        var panel = GetOverlayPanel(viewport);
+        const int frameWidth = 494;
+        const int frameHeight = 146;
+        return new Rectangle(
+            panel.Left + ((panel.Width - frameWidth) / 2),
+            panel.Top + 23,
+            frameWidth,
+            frameHeight);
     }
 
     private static IReadOnlyList<Rectangle> CreateSelectedBuildSlots(int startX, int startY, int size, int gap)

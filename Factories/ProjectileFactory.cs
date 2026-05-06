@@ -10,6 +10,11 @@ public sealed class ProjectileFactory
         return CreateProjectile(rune, target, damageMultiplier: 1f, canRetargetLeadingEnemy: false);
     }
 
+    public ProjectileEntity CreateFromRune(RuneEntity rune, EnemyEntity target, float damageMultiplier)
+    {
+        return CreateProjectile(rune, target, damageMultiplier, canRetargetLeadingEnemy: false);
+    }
+
     public ProjectileEntity CreateThurisazFireball(RuneEntity rune, EnemyEntity target)
     {
         return CreateProjectile(rune, target, damageMultiplier: 1f, canRetargetLeadingEnemy: true);

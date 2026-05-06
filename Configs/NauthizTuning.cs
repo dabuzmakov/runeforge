@@ -6,11 +6,11 @@ public static class NauthizTuning
 
     private static readonly float[] TotalIncomingDamageBonusPercentAtMaxStacksByTier =
     [
-        10f,
-        18f,
-        26f,
-        34f,
-        42f
+        3f,
+        4.5f,
+        6f,
+        7.5f,
+        9f
     ];
 
     public static float GetIncomingDamageBonusPercentPerStack(int tier)

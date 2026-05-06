@@ -6,11 +6,11 @@ public static class WunjoTuning
 
     private static readonly float[] CriticalHitBonusPercentByTier =
     [
-        5f,
-        10f,
-        15f,
+        12f,
         20f,
-        25f
+        28f,
+        34f,
+        40f
     ];
 
     public static float GetCriticalHitBonusPercent(int tier)

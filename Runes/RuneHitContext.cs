@@ -10,6 +10,7 @@ public sealed class RuneHitContext
         ProjectileEntity projectile,
         EnemyEntity primaryTarget,
         IReadOnlyList<System.Numerics.Vector2> path,
+        float pathLength,
         RuneEffectSystem runeEffectSystem,
         EffectAnimationSystem effectAnimationSystem)
     {
@@ -17,6 +18,7 @@ public sealed class RuneHitContext
         Projectile = projectile;
         PrimaryTarget = primaryTarget;
         Path = path;
+        PathLength = pathLength;
         RuneEffectSystem = runeEffectSystem;
         EffectAnimationSystem = effectAnimationSystem;
     }
@@ -28,6 +30,8 @@ public sealed class RuneHitContext
     public EnemyEntity PrimaryTarget { get; }
 
     public IReadOnlyList<System.Numerics.Vector2> Path { get; }
+
+    public float PathLength { get; }
 
     public RuneEffectSystem RuneEffectSystem { get; }
 

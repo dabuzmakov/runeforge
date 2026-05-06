@@ -2,9 +2,9 @@ namespace runeforge.Configs;
 
 public static class SowiloTuning
 {
-    public const int SpecialAttackFrequency = 5;
+    public const int SpecialAttackFrequency = 7;
     public const float BeamDamageHitPadding = 4f;
-    public const float BeamLifetimeSeconds = 0.7f;
+    public const float BeamLifetimeSeconds = 0.55f;
     public const float EndpointRetreatSpeed = 150f;
     public const float AnimationFrameDurationSeconds = 0.05f;
     public const float BeamThickness = 100f;
@@ -14,11 +14,11 @@ public static class SowiloTuning
 
     private static readonly float[] BeamDamageByTier =
     [
-        2.0f,
-        6.6f,
-        12.0f,
-        18.2f,
-        29.0f
+        1.0f,
+        2.75f,
+        4.5f,
+        6.2f,
+        8.3f
     ];
 
     public static float SpriteFrameHeight => SpriteSheetTotalHeight / SpriteFrameCount;
@@ -31,7 +31,7 @@ public static class SowiloTuning
 
     public static float GetHitThreshold(float enemyRadius, EnemyShape enemyShape)
     {
-        var shapeMultiplier = enemyShape == EnemyShape.Square ? 1.1f : 1f;
+        var shapeMultiplier = enemyShape is EnemyShape.Square or EnemyShape.Diamond ? 1.1f : 1f;
         return (enemyRadius * shapeMultiplier) + BeamDamageHitPadding;
     }
 }

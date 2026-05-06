@@ -8,38 +8,38 @@ public static class BerkanoTuning
 
     private static readonly float[] PoisonChanceByTier =
     [
+        0.08f,
         0.10f,
-        0.13f,
-        0.16f,
-        0.19f,
-        0.22f
+        0.12f,
+        0.14f,
+        0.16f
     ];
 
     private static readonly float[] PoisonRadiusByTier =
     [
-        56f,
-        64f,
-        72f,
-        80f,
-        88f
+        52f,
+        60f,
+        68f,
+        76f,
+        84f
     ];
 
     private static readonly float[] PoisonDurationByTier =
     [
-        3.0f,
-        3.5f,
-        4.0f,
-        4.5f,
-        5.0f
+        2.6f,
+        3.1f,
+        3.6f,
+        4.1f,
+        4.6f
     ];
 
     private static readonly float[] PoisonDamagePerTickByTier =
     [
-        0.36f,
-        0.56f,
-        0.82f,
-        1.14f,
-        1.52f
+        0.28f,
+        0.44f,
+        0.64f,
+        0.88f,
+        1.18f
     ];
 
     public static float GetPoisonChance(int tier)

@@ -10,7 +10,8 @@ public sealed class GameBoard
     private const int PathBottomMargin = 70;
     private const int PathCornerRadius = 64;
     private const int PathCornerSegments = 6;
-    private const int BagHalfSize = 80;
+    private const int BottomControlSize = 128;
+    private const int BottomControlSpacing = 12;
     private const int BottomOffset = 200;
 
     public GameBoard(int screenWidth, int screenHeight)
@@ -18,7 +19,8 @@ public sealed class GameBoard
         ViewportBounds = new Rectangle(0, 0, screenWidth, screenHeight);
         TableBounds = CreateTableBounds(screenWidth, screenHeight);
         Grid = new TableGrid(TableBounds);
-        BagBounds = CreateBagBounds(screenWidth, screenHeight);
+        BagBounds = CreateBottomControlBounds(screenWidth, screenHeight, controlIndex: 0);
+        RerollBounds = CreateBottomControlBounds(screenWidth, screenHeight, controlIndex: 1);
         Path = CreatePath(TableBounds);
         PathLength = PathGeometry.ComputeLength(Path);
     }
@@ -28,6 +30,8 @@ public sealed class GameBoard
     public Rectangle TableBounds { get; }
 
     public Rectangle BagBounds { get; }
+
+    public Rectangle RerollBounds { get; }
 
     public TableGrid Grid { get; }
 
@@ -47,15 +51,19 @@ public sealed class GameBoard
             TableSize);
     }
 
-    private static Rectangle CreateBagBounds(int screenWidth, int screenHeight)
+    private static Rectangle CreateBottomControlBounds(int screenWidth, int screenHeight, int controlIndex)
     {
-        var center = new Vector2(screenWidth * 0.5f, screenHeight - BottomOffset);
+        var centerY = screenHeight - BottomOffset;
+        var totalWidth = (BottomControlSize * 2) + BottomControlSpacing;
+        var groupLeft = (screenWidth - totalWidth) / 2;
+        var left = groupLeft + (controlIndex * (BottomControlSize + BottomControlSpacing));
+        var top = (int)(centerY - (BottomControlSize * 0.5f));
 
         return new Rectangle(
-            (int)(center.X - BagHalfSize),
-            (int)(center.Y - BagHalfSize),
-            BagHalfSize * 2,
-            BagHalfSize * 2);
+            left,
+            top,
+            BottomControlSize,
+            BottomControlSize);
     }
 
     private static IReadOnlyList<Vector2> CreatePath(Rectangle tableBounds)

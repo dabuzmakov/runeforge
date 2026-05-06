@@ -4,5 +4,6 @@ public enum DamagePopupStyle
 {
     Normal,
     Critical,
-    Poison
+    Poison,
+    Burn
 }

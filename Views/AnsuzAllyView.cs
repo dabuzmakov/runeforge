@@ -8,6 +8,9 @@ namespace runeforge.Views;
 public sealed class AnsuzAllyView : IDisposable
 {
     private const float SquareCornerRadius = 7f;
+    private const float TriangleCurveTension = 0.22f;
+    private const float StarInnerRadiusRatio = 0.46f;
+    private const float DiamondInsetRatio = 0.12f;
     private const float MinimumRenderableDiameter = 1.5f;
     private readonly Font _font;
     private readonly StringFormat _textFormat;
@@ -22,11 +25,12 @@ public sealed class AnsuzAllyView : IDisposable
 
     public AnsuzAllyView()
     {
-        _font = FontLibrary.Create(12f, FontStyle.Bold);
+        _font = FontLibrary.CreateNumeric(10f, FontStyle.Bold);
         _textFormat = new StringFormat
         {
             Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoClip | StringFormatFlags.NoWrap
         };
         _outerBrush = new SolidBrush(Color.FromArgb(180, 36, 120, 72));
         _coreBrush = new SolidBrush(Color.FromArgb(228, 98, 208, 128));
@@ -104,7 +108,13 @@ public sealed class AnsuzAllyView : IDisposable
 
         graphics.FillRectangle(_badgeBrush, badgeBounds.X, badgeBounds.Y, badgeBounds.Width, badgeBounds.Height);
         graphics.DrawRectangle(_badgePen, badgeBounds.X, badgeBounds.Y, badgeBounds.Width, badgeBounds.Height);
-        graphics.DrawString(((int)MathF.Ceiling(ally.Health)).ToString(), _font, _textBrush, badgeBounds, _textFormat);
+        AdaptiveTextRenderer.DrawCentered(
+            graphics,
+            ((int)MathF.Ceiling(ally.Health)).ToString(),
+            _font,
+            _textBrush,
+            badgeBounds,
+            _textFormat);
     }
 
     private static RectangleF Inflate(RectangleF rectangle, float amountX, float amountY)
@@ -126,6 +136,27 @@ public sealed class AnsuzAllyView : IDisposable
         if (shape == EnemyShape.Square)
         {
             using var path = CreateRoundedRectanglePath(bounds, SquareCornerRadius);
+            graphics.FillPath(brush, path);
+            return;
+        }
+
+        if (shape == EnemyShape.Triangle)
+        {
+            using var path = CreateRoundedTrianglePath(bounds);
+            graphics.FillPath(brush, path);
+            return;
+        }
+
+        if (shape == EnemyShape.Star)
+        {
+            using var path = CreateStarPath(bounds);
+            graphics.FillPath(brush, path);
+            return;
+        }
+
+        if (shape == EnemyShape.Diamond)
+        {
+            using var path = CreateDiamondPath(bounds);
             graphics.FillPath(brush, path);
             return;
         }
@@ -152,6 +183,27 @@ public sealed class AnsuzAllyView : IDisposable
             return;
         }
 
+        if (shape == EnemyShape.Triangle)
+        {
+            using var path = CreateRoundedTrianglePath(bounds);
+            graphics.DrawPath(pen, path);
+            return;
+        }
+
+        if (shape == EnemyShape.Star)
+        {
+            using var path = CreateStarPath(bounds);
+            graphics.DrawPath(pen, path);
+            return;
+        }
+
+        if (shape == EnemyShape.Diamond)
+        {
+            using var path = CreateDiamondPath(bounds);
+            graphics.DrawPath(pen, path);
+            return;
+        }
+
         graphics.DrawEllipse(pen, bounds);
     }
 
@@ -170,6 +222,72 @@ public sealed class AnsuzAllyView : IDisposable
         path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
         path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
         path.CloseFigure();
+        return path;
+    }
+
+    private static GraphicsPath CreateRoundedTrianglePath(RectangleF bounds)
+    {
+        if (bounds.Width <= 0.01f || bounds.Height <= 0.01f)
+        {
+            return new GraphicsPath();
+        }
+
+        var points = new[]
+        {
+            new PointF(bounds.X + (bounds.Width * 0.5f), bounds.Y + (bounds.Height * 0.08f)),
+            new PointF(bounds.Right - (bounds.Width * 0.12f), bounds.Bottom - (bounds.Height * 0.12f)),
+            new PointF(bounds.X + (bounds.Width * 0.12f), bounds.Bottom - (bounds.Height * 0.12f))
+        };
+
+        var path = new GraphicsPath();
+        path.AddClosedCurve(points, TriangleCurveTension);
+        return path;
+    }
+
+    private static GraphicsPath CreateStarPath(RectangleF bounds)
+    {
+        if (bounds.Width <= 0.01f || bounds.Height <= 0.01f)
+        {
+            return new GraphicsPath();
+        }
+
+        var centerX = bounds.X + (bounds.Width * 0.5f);
+        var centerY = bounds.Y + (bounds.Height * 0.5f);
+        var outerRadius = MathF.Min(bounds.Width, bounds.Height) * 0.5f;
+        var innerRadius = outerRadius * StarInnerRadiusRatio;
+        var points = new PointF[10];
+
+        for (var i = 0; i < points.Length; i++)
+        {
+            var angle = (-MathF.PI / 2f) + (i * MathF.PI / 5f);
+            var radius = i % 2 == 0 ? outerRadius : innerRadius;
+            points[i] = new PointF(
+                centerX + (MathF.Cos(angle) * radius),
+                centerY + (MathF.Sin(angle) * radius));
+        }
+
+        var path = new GraphicsPath();
+        path.AddPolygon(points);
+        return path;
+    }
+
+    private static GraphicsPath CreateDiamondPath(RectangleF bounds)
+    {
+        if (bounds.Width <= 0.01f || bounds.Height <= 0.01f)
+        {
+            return new GraphicsPath();
+        }
+
+        var points = new[]
+        {
+            new PointF(bounds.X + (bounds.Width * 0.5f), bounds.Y + (bounds.Height * DiamondInsetRatio)),
+            new PointF(bounds.Right - (bounds.Width * DiamondInsetRatio), bounds.Y + (bounds.Height * 0.5f)),
+            new PointF(bounds.X + (bounds.Width * 0.5f), bounds.Bottom - (bounds.Height * DiamondInsetRatio)),
+            new PointF(bounds.X + (bounds.Width * DiamondInsetRatio), bounds.Y + (bounds.Height * 0.5f))
+        };
+
+        var path = new GraphicsPath();
+        path.AddPolygon(points);
         return path;
     }
 }

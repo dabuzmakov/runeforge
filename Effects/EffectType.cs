@@ -12,8 +12,13 @@ public enum EffectType
     LaguzBlackHole,
     LaguzExecute,
     AnsuzImpact,
+    JeraUpgrade,
+    MannazLightning,
+    TiwazCharge,
     RuneHold,
     RuneSpawn,
+    RuneSwap,
     RuneRemove,
-    RaidhoOverload
+    RaidhoOverload,
+    Teleport
 }

@@ -42,7 +42,8 @@ public sealed class EffectView : IDisposable
             effect.Scale,
             effect.CurrentFrameIndex,
             effect.RotationRadians,
-            effect.FlipHorizontally);
+            effect.FlipHorizontally,
+            effect.AnchorBottomCenter);
     }
 
     public void Draw(
@@ -53,7 +54,8 @@ public sealed class EffectView : IDisposable
         float scale,
         int frameIndex,
         float rotationRadians = 0f,
-        bool flipHorizontally = false)
+        bool flipHorizontally = false,
+        bool anchorBottomCenter = false)
     {
         if (definition.UsesFrameSequence)
         {
@@ -64,7 +66,8 @@ public sealed class EffectView : IDisposable
                 scale,
                 frameIndex,
                 rotationRadians,
-                flipHorizontally);
+                flipHorizontally,
+                anchorBottomCenter);
             return;
         }
 
@@ -92,7 +95,8 @@ public sealed class EffectView : IDisposable
             position,
             definition.FrameWidth,
             definition.FrameHeight,
-            scale);
+            scale,
+            anchorBottomCenter);
 
         if (MathF.Abs(rotationRadians) <= 0.0001f && !flipHorizontally)
         {
@@ -145,7 +149,8 @@ public sealed class EffectView : IDisposable
         float scale,
         int frameIndex,
         float rotationRadians,
-        bool flipHorizontally)
+        bool flipHorizontally,
+        bool anchorBottomCenter)
     {
         if (!_frameSequences.TryGetValue(definition.Type, out var frames) || frames.Count == 0)
         {
@@ -156,7 +161,7 @@ public sealed class EffectView : IDisposable
             ? 0
             : ((frameIndex % definition.FrameCount) + definition.FrameCount) % definition.FrameCount;
         var frame = frames[Math.Min(clampedFrameIndex, frames.Count - 1)];
-        var destinationRectangle = CreateDestinationRectangle(position, frame.Width, frame.Height, scale);
+        var destinationRectangle = CreateDestinationRectangle(position, frame.Width, frame.Height, scale, anchorBottomCenter);
 
         if (MathF.Abs(rotationRadians) <= 0.0001f && !flipHorizontally)
         {
@@ -186,10 +191,24 @@ public sealed class EffectView : IDisposable
         graphics.Restore(state);
     }
 
-    private static RectangleF CreateDestinationRectangle(Vector2 center, int frameWidth, int frameHeight, float scale)
+    private static RectangleF CreateDestinationRectangle(
+        Vector2 center,
+        int frameWidth,
+        int frameHeight,
+        float scale,
+        bool anchorBottomCenter = false)
     {
         var drawWidth = frameWidth * scale;
         var drawHeight = frameHeight * scale;
+
+        if (anchorBottomCenter)
+        {
+            return new RectangleF(
+                center.X - (drawWidth * 0.5f),
+                center.Y - drawHeight,
+                drawWidth,
+                drawHeight);
+        }
 
         return new RectangleF(
             center.X - (drawWidth * 0.5f),

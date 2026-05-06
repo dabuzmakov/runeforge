@@ -7,12 +7,16 @@ public sealed class IsaRuneBehavior : RuneBehavior
 {
     public override float GetEffectCooldown(RuneEntity rune)
     {
-        return IsaTuning.GetValues(rune.Stats.Tier).TriggerIntervalSeconds;
+        return float.MaxValue;
     }
 
     public override bool TryActivatePeriodicEffect(RuneCombatContext context, RuneEntity rune)
     {
-        context.RuneEffectSystem.ApplyIsaLaneSlow(context.GameState);
+        return true;
+    }
+
+    public override bool ShouldConsumeEffectCooldownOnAttempt(RuneEntity rune)
+    {
         return true;
     }
 }

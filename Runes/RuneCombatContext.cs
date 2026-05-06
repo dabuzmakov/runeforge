@@ -45,7 +45,12 @@ public sealed class RuneCombatContext
 
     public void SpawnProjectile(RuneEntity rune, EnemyEntity target)
     {
-        var primaryProjectile = _projectileFactory.CreateFromRune(rune, target);
+        SpawnProjectile(rune, target, damageMultiplier: 1f);
+    }
+
+    public void SpawnProjectile(RuneEntity rune, EnemyEntity target, float damageMultiplier)
+    {
+        var primaryProjectile = _projectileFactory.CreateFromRune(rune, target, damageMultiplier);
         GameState.Projectiles.Add(primaryProjectile);
         TrySpawnDagazMultiShot(rune, target, primaryProjectile);
     }
@@ -78,19 +83,16 @@ public sealed class RuneCombatContext
             return;
         }
 
-        var additionalTargets = GameState.Enemies
-            .Where(enemy => enemy.Data.IsAlive &&
-                            !enemy.Path.HasReachedGoal &&
-                            !ReferenceEquals(enemy, primaryTarget))
-            .OrderBy(static _ => Random.Shared.Next())
-            .Take(rune.Buffs.AdditionalProjectileCount)
-            .ToArray();
-        if (additionalTargets.Length == 0)
+        var additionalTargets = EnemyQuery.SelectRandomTargetableEnemies(
+            GameState.Enemies,
+            rune.Buffs.AdditionalProjectileCount,
+            primaryTarget);
+        if (additionalTargets.Count == 0)
         {
             return;
         }
 
-        for (var i = 0; i < additionalTargets.Length; i++)
+        for (var i = 0; i < additionalTargets.Count; i++)
         {
             GameState.Projectiles.Add(_projectileFactory.CreateAdditionalShot(
                 rune,

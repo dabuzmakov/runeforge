@@ -53,9 +53,9 @@ public sealed class AnsuzAllySystem
         var spawnPosition = PathGeometry.GetPointAtDistance(path, spawnDistance);
         var ally = new AnsuzAllyEntity(
             sourceEnemy.Data.Config.Shape,
-            sourceEnemy.Data.Radius,
-            sourceEnemy.Data.Speed,
-            sourceEnemy.Data.MaxHealth,
+            sourceEnemy.Data.Radius * AnsuzTuning.AllyRadiusMultiplier,
+            sourceEnemy.Data.Speed * AnsuzTuning.AllySpeedMultiplier,
+            sourceEnemy.Data.MaxHealth * AnsuzTuning.AllyHealthMultiplier,
             spawnDistance,
             spawnPosition);
         gameState.AnsuzAllies.Add(ally);

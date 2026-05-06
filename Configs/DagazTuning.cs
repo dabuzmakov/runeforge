@@ -6,20 +6,20 @@ public static class DagazTuning
 {
     private static readonly float[] MultiShotChancePercentByTier =
     [
-        16f,
+        12f,
+        17f,
         22f,
-        28f,
-        34f,
-        40f
+        27f,
+        32f
     ];
 
     private static readonly float[] AdditionalProjectileDamageMultiplierByTier =
     [
-        0.5f,
-        0.3f,
-        0.2333f,
-        0.2f,
-        0.2f
+        0.42f,
+        0.26f,
+        0.20f,
+        0.18f,
+        0.18f
     ];
 
     public static float GetMultiShotChancePercent(int tier)

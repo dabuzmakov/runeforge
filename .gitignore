@@ -1,113 +1,19 @@
-# =========================
-
-# Build results
-
-# =========================
-
 bin/
 obj/
 out/
+artifacts/
+publish/
 
-# =========================
-
-# User-specific files
-
-# =========================
+.vs/
+.vscode/
+.idea/
+.dotnet/
 
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
-
-# =========================
-
-# Visual Studio
-
-# =========================
-
-.vs/
-.vscode/
-.dotnet/
-
-# =========================
-
-# Rider / JetBrains
-
-# =========================
-
-.idea/
-*.sln.iml
-
-# =========================
-
-# Logs
-
-# =========================
-
-*.log
-
-# =========================
-
-# OS files
-
-# =========================
-
-.DS_Store
-Thumbs.db
-
-# =========================
-
-# NuGet
-
-# =========================
-
-*.nupkg
-packages/
-.nuget/
-
-# =========================
-
-# .NET Core / SDK
-
-# =========================
-
-project.lock.json
-project.fragment.lock.json
-artifacts/
-
-# =========================
-
-# Publish output
-
-# =========================
-
-publish/
-*.publishsettings
-
-# =========================
-
-# Temporary files
-
-# =========================
-
-*.tmp
-*.temp
-*.cache
-
-# =========================
-
-# WinForms Designer cache
-
-# =========================
-
 *.resx.user
 
-# =========================
-
-# Debug files
-
-# =========================
-
-*.pdb
-
-# =========================
+Thumbs.db
+.DS_Store

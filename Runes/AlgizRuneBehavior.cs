@@ -115,6 +115,7 @@ public sealed class AlgizRuneBehavior : RuneBehavior
             damage,
             isCriticalHit,
             RuneType.Algiz,
-            rune.Stats.Tier);
+            rune.Stats.Tier,
+            rune);
     }
 }

@@ -15,7 +15,9 @@ public sealed class AnimatedEffect
         float? scale = null,
         float rotationRadians = 0f,
         bool flipHorizontally = false,
-        EnemyEntity? attachedEnemy = null)
+        EnemyEntity? attachedEnemy = null,
+        bool anchorBottomCenter = false,
+        float attachedVerticalOffset = 0f)
     {
         Definition = definition;
         RowIndex = rowIndex;
@@ -24,13 +26,33 @@ public sealed class AnimatedEffect
         RotationRadians = rotationRadians;
         FlipHorizontally = flipHorizontally;
         AttachedEnemy = attachedEnemy;
+        AnchorBottomCenter = anchorBottomCenter;
+        AttachedVerticalOffset = attachedVerticalOffset;
     }
 
     public SpriteSheetEffectDefinition Definition { get; }
 
     public int RowIndex { get; }
 
-    public Vector2 Position => AttachedEnemy?.Transform.Position ?? _initialPosition;
+    public Vector2 Position
+    {
+        get
+        {
+            if (AttachedEnemy == null)
+            {
+                return _initialPosition;
+            }
+
+            var attachedPosition = AttachedEnemy.Transform.Position;
+            if (AnchorBottomCenter)
+            {
+                attachedPosition.Y += AttachedEnemy.Data.Radius * AttachedEnemy.PresentationScale;
+            }
+
+            attachedPosition.Y += AttachedVerticalOffset;
+            return attachedPosition;
+        }
+    }
 
     public float Scale { get; }
 
@@ -39,6 +61,10 @@ public sealed class AnimatedEffect
     public bool FlipHorizontally { get; }
 
     public EnemyEntity? AttachedEnemy { get; }
+
+    public bool AnchorBottomCenter { get; }
+
+    public float AttachedVerticalOffset { get; }
 
     public bool IsFinished => _elapsed >= TotalDuration;
 

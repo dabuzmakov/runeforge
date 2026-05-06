@@ -5,21 +5,23 @@ namespace runeforge.Views;
 
 internal static class FontLibrary
 {
-    private const string PreferredFontFamilyName = "Timaday";
+    private const string PreferredFontFamilyName = "KZ Supercell-Magic";
+    private const float PreferredFontSizeScale = 0.84f;
+    private const string NumericFontFamilyName = "Timaday";
+    private const float NumericFontSizeScale = 1f;
 
     private static readonly Lazy<PrivateFontCollection> FontCollection = new(LoadFonts);
-    private static readonly Lazy<FontFamily?> PrivateFontFamily = new(ResolvePrivateFontFamily);
+    private static readonly Lazy<FontFamily?> PrivateFontFamily = new(() => ResolvePrivateFontFamily(PreferredFontFamilyName));
+    private static readonly Lazy<FontFamily?> NumericFontFamily = new(() => ResolvePrivateFontFamily(NumericFontFamilyName));
 
     public static Font Create(float size, FontStyle style)
     {
-        var family = PrivateFontFamily.Value;
-        if (family == null)
-        {
-            return new Font("Segoe UI", size, style, GraphicsUnit.Pixel);
-        }
+        return CreateInternal(PrivateFontFamily.Value, size, style, PreferredFontSizeScale);
+    }
 
-        var resolvedStyle = ResolveStyle(family, style);
-        return new Font(family, size, resolvedStyle, GraphicsUnit.Pixel);
+    public static Font CreateNumeric(float size, FontStyle style)
+    {
+        return CreateInternal(NumericFontFamily.Value ?? PrivateFontFamily.Value, size, style, NumericFontSizeScale);
     }
 
     private static PrivateFontCollection LoadFonts()
@@ -34,10 +36,10 @@ internal static class FontLibrary
         return collection;
     }
 
-    private static FontFamily? ResolvePrivateFontFamily()
+    private static FontFamily? ResolvePrivateFontFamily(string familyName)
     {
-        var family = FontCollection.Value.Families.FirstOrDefault(static family =>
-            string.Equals(family.Name, PreferredFontFamilyName, StringComparison.OrdinalIgnoreCase));
+        var family = FontCollection.Value.Families.FirstOrDefault(family =>
+            string.Equals(family.Name, familyName, StringComparison.OrdinalIgnoreCase));
 
         if (family != null)
         {
@@ -72,6 +74,17 @@ internal static class FontLibrary
         return family.IsStyleAvailable(FontStyle.Italic)
             ? FontStyle.Italic
             : FontStyle.Regular;
+    }
+
+    private static Font CreateInternal(FontFamily? family, float size, FontStyle style, float sizeScale)
+    {
+        if (family == null)
+        {
+            return new Font("Segoe UI", size, style, GraphicsUnit.Pixel);
+        }
+
+        var resolvedStyle = ResolveStyle(family, style);
+        return new Font(family, size * sizeScale, resolvedStyle, GraphicsUnit.Pixel);
     }
 
     private static IReadOnlyList<string> ResolveFontPaths()

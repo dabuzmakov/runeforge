@@ -8,19 +8,19 @@ public static class RuneTierTuning
     private static readonly float[] DamageMultiplierByTier =
     [
         1.00f,
-        2.20f,
-        3.80f,
-        6.00f,
-        8.80f
+        2.10f,
+        3.45f,
+        5.25f,
+        7.50f
     ];
 
     private static readonly float[] AttackIntervalDivisorByTier =
     [
         1.00f,
-        1.18f,
-        1.36f,
-        1.56f,
-        1.80f
+        1.16f,
+        1.30f,
+        1.44f,
+        1.58f
     ];
 
     public static int Clamp(int tier)

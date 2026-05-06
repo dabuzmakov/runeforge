@@ -1,3 +1,4 @@
+using runeforge.Configs;
 using runeforge.Models;
 
 namespace runeforge.Runes;
@@ -29,5 +30,24 @@ public sealed class ThurisazRuneBehavior : RuneBehavior
         context.SpawnThurisazFireball(rune, target);
         rune.State.ConsumeThurisazCharge();
         return true;
+    }
+
+    public override void OnProjectileHit(RuneHitContext context)
+    {
+        var bonusDamage = context.PrimaryTarget.Data.MaxHealth *
+            ThurisazTuning.GetBonusMaxHealthDamagePercent(context.Projectile.Impact.SourceRuneTier);
+        if (bonusDamage <= 0.001f)
+        {
+            return;
+        }
+
+        context.RuneEffectSystem.ApplyDirectDamage(
+            context.GameState,
+            context.PrimaryTarget,
+            bonusDamage,
+            sourceRuneType: RuneType.Thurisaz,
+            sourceRuneTier: context.Projectile.Impact.SourceRuneTier,
+            sourceRune: context.Projectile.OwnerRune,
+            checkIgnore: false);
     }
 }

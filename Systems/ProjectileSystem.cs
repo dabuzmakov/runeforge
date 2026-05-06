@@ -7,6 +7,7 @@ public sealed class ProjectileSystem
     public void Update(
         GameState gameState,
         IReadOnlyList<System.Numerics.Vector2> path,
+        float pathLength,
         float deltaTime,
         RuneEffectSystem runeEffectSystem,
         EffectAnimationSystem effectAnimationSystem)
@@ -22,7 +23,7 @@ public sealed class ProjectileSystem
                 continue;
             }
 
-            runeEffectSystem.ApplyHitEffects(gameState, path, projectile, effectAnimationSystem);
+            runeEffectSystem.ApplyHitEffects(gameState, path, pathLength, projectile, effectAnimationSystem);
             projectile.Flight.ClearHitTarget();
         }
 

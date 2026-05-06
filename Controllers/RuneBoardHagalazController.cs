@@ -143,6 +143,11 @@ public sealed class RuneBoardHagalazController
                 continue;
             }
 
+            if (enemy.StatusEffects.TryIgnoreIncomingAttackOrEffect())
+            {
+                continue;
+            }
+
             enemy.Data.TakeDamage(enemy.StatusEffects.ApplyIncomingDamageMultiplier(damage));
         }
     }

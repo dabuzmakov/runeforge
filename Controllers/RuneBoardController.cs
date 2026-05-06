@@ -14,6 +14,9 @@ public sealed partial class RuneBoardController
     private const float BagInsertPulseDuration = 0.3f;
     private const float BagInsertPulseScale = 0.12f;
     private const float BagInsertPulseChargeRatio = 0.32f;
+    private const float RerollClickPulseDuration = 0.14f;
+    private const float RerollClickPulseScale = 0.08f;
+    private const float RerollClickPulseChargeRatio = 0.4f;
 
     private sealed class PendingMerge
     {
@@ -38,8 +41,10 @@ public sealed partial class RuneBoardController
     private float _bagHoverBlend;
     private float _bagClickPulseElapsed = BagClickPulseDuration;
     private float _bagInsertPulseElapsed = BagInsertPulseDuration;
+    private float _rerollClickPulseElapsed = RerollClickPulseDuration;
     private bool _isBagHovered;
     private bool _isDraggingOverBag;
+    private bool _isRerollHovered;
 
     public RuneBoardController(GameModel model, RuneFactory runeFactory, EffectAnimationSystem effectAnimations)
     {
@@ -85,21 +90,43 @@ public sealed partial class RuneBoardController
         return DraggedRune != null && GetHoveredMergeTarget(mousePosition) != null;
     }
 
-    public bool CanOpenDevSpawnMenuAt(Point mousePosition)
+    public bool TryToggleTiwazModeAt(Point mousePosition)
     {
-        return !State.Ui.BuildSelection.IsOpen &&
-            DraggedRune == null &&
-            TryGetEmptyCellAtPoint(mousePosition, out _);
-    }
-
-    public bool TrySpawnDevRuneAt(Point mousePosition, RuneType runeType, int tier)
-    {
-        if (!TryGetEmptyCellAtPoint(mousePosition, out var cell))
+        if (State.Ui.BuildSelection.IsOpen || DraggedRune != null)
         {
             return false;
         }
 
-        State.Runes.Add(_runeFactory.Create(cell, runeType, RuneTierTuning.Clamp(tier)));
+        var rune = GetRuneAtPoint(mousePosition, excludedRune: null);
+        if (rune == null || rune.Stats.Type != RuneType.Tiwaz)
+        {
+            return false;
+        }
+
+        State.Tiwaz.ToggleMode();
+        for (var i = 0; i < State.Runes.Count; i++)
+        {
+            var tiwazRune = State.Runes[i];
+            if (tiwazRune.Stats.Type != RuneType.Tiwaz)
+            {
+                continue;
+            }
+
+            tiwazRune.State.SetTiwazChargeEffectActive(State.Tiwaz.IsCharging);
+            tiwazRune.State.SetTiwazDischargeIndicatorActive(State.Tiwaz.IsDischarging);
+            tiwazRune.State.SetTiwazDischargeProgress(
+                State.Tiwaz.IsDischarging
+                    ? 1f
+                    : 0f);
+            if (!State.Tiwaz.IsDischarging)
+            {
+                continue;
+            }
+
+            tiwazRune.State.PrepareTiwazDischarge(tiwazRune.Stats.Damage);
+            tiwazRune.Cooldown.Remaining = 0f;
+        }
+
         return true;
     }
 
@@ -126,6 +153,10 @@ public sealed partial class RuneBoardController
         {
             SpawnRandomRune();
         }
+        else if (DraggedRune == null && leftPressed && Board.RerollBounds.Contains(mousePosition))
+        {
+            TryRerollRunePositions();
+        }
 
         wasLeftMouseDown = isLeftMouseDown;
     }
@@ -134,8 +165,9 @@ public sealed partial class RuneBoardController
     {
         _bagClickPulseElapsed = Math.Min(BagClickPulseDuration, _bagClickPulseElapsed + deltaTime);
         _bagInsertPulseElapsed = Math.Min(BagInsertPulseDuration, _bagInsertPulseElapsed + deltaTime);
+        _rerollClickPulseElapsed = Math.Min(RerollClickPulseDuration, _rerollClickPulseElapsed + deltaTime);
         _hagalazController.Update(deltaTime);
-        UpdateBagVisualState(deltaTime, mousePosition);
+        UpdateBottomControlVisualState(deltaTime, mousePosition);
         UpdateRuneInteractionState(mousePosition);
     }
 
@@ -147,8 +179,12 @@ public sealed partial class RuneBoardController
         _bagHoverBlend = 0f;
         _isDraggingOverBag = false;
         _isBagHovered = false;
+        _isRerollHovered = false;
         State.Ui.UseOpenBagSprite = false;
+        State.Ui.UseActiveBagSprite = false;
         State.Ui.BagScale = 1f;
+        State.Ui.UseActiveRerollButtonSprite = false;
+        State.Ui.RerollScale = 1f;
         wasLeftMouseDown = isLeftMouseDown;
         UpdateRuneInteractionState(Point.Empty);
     }

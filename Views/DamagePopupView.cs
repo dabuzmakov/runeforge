@@ -7,8 +7,8 @@ public sealed class DamagePopupView : IDisposable
 {
     private const float DistanceFromEnemy = 14f;
     private const float DistancePerExtraDigit = 4f;
-    private const float HalfWidth = 22f;
-    private const float HalfHeight = 7f;
+    private const float HalfWidth = 24f;
+    private const float HalfHeight = 11f;
 
     private readonly RectangleF _tableBounds;
     private readonly Font _font;
@@ -17,20 +17,23 @@ public sealed class DamagePopupView : IDisposable
     private readonly SolidBrush _textBrush;
     private readonly SolidBrush _criticalTextBrush;
     private readonly SolidBrush _poisonTextBrush;
+    private readonly SolidBrush _burnTextBrush;
 
     public DamagePopupView(Rectangle tableBounds)
     {
         _tableBounds = tableBounds;
-        _font = FontLibrary.Create(16f, FontStyle.Bold);
-        _criticalFont = FontLibrary.Create(20f, FontStyle.Bold);
+        _font = FontLibrary.CreateNumeric(16f, FontStyle.Bold);
+        _criticalFont = FontLibrary.CreateNumeric(20f, FontStyle.Bold);
         _textFormat = new StringFormat
         {
             Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoClip | StringFormatFlags.NoWrap
         };
         _textBrush = new SolidBrush(Color.White);
         _criticalTextBrush = new SolidBrush(Color.FromArgb(255, 242, 214, 92));
         _poisonTextBrush = new SolidBrush(Color.FromArgb(85, 180, 2));
+        _burnTextBrush = new SolidBrush(Color.FromArgb(255, 242, 136, 58));
     }
 
     public void Draw(Graphics graphics, DamagePopupInstance popup)
@@ -64,6 +67,7 @@ public sealed class DamagePopupView : IDisposable
             {
                 DamagePopupStyle.Critical => _criticalTextBrush,
                 DamagePopupStyle.Poison => _poisonTextBrush,
+                DamagePopupStyle.Burn => _burnTextBrush,
                 _ => _textBrush
             };
             var font = popup.Style == DamagePopupStyle.Critical ? _criticalFont : _font;
@@ -83,6 +87,7 @@ public sealed class DamagePopupView : IDisposable
         _textBrush.Dispose();
         _criticalTextBrush.Dispose();
         _poisonTextBrush.Dispose();
+        _burnTextBrush.Dispose();
     }
 
     private PointF GetPopupDirection(System.Numerics.Vector2 position)

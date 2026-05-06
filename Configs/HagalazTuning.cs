@@ -3,7 +3,7 @@ namespace runeforge.Configs;
 public static class HagalazTuning
 {
     public const int ChargeSegmentCount = 6;
-    public const float ChargeSegmentIntervalSeconds = 10f;
+    public const float ChargeSegmentIntervalSeconds = 6.0f;
     public const float ExplosionDelaySeconds = 0.1f;
     public const int ExplosionEffectRowIndex = 0;
     public const float ExplosionEffectScale = 3.55f;
@@ -14,11 +14,11 @@ public static class HagalazTuning
 
     private static readonly float[] ExplosionDamageByTier =
     [
-        22f,
         34f,
-        50f,
+        52f,
         74f,
-        110f
+        104f,
+        148f
     ];
 
     public static float GetExplosionDamage(int tier)

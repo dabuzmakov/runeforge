@@ -32,7 +32,7 @@ public sealed class EiwazRuneBehavior : RuneBehavior
             var target = EnemyQuery.FindById(context.GameState.Enemies, rune.State.EiwazTargetEnemyId);
             if (!EnemyQuery.IsTargetable(target))
             {
-                var replacement = SelectHighestHealthEnemy(context.GameState.Enemies);
+                var replacement = SelectHighestPriorityEnemy(context.GameState, rune);
                 if (replacement == null)
                 {
                     rune.State.ClearEiwazAim();
@@ -53,7 +53,7 @@ public sealed class EiwazRuneBehavior : RuneBehavior
             return true;
         }
 
-        var initialTarget = SelectHighestHealthEnemy(context.GameState.Enemies);
+        var initialTarget = SelectHighestPriorityEnemy(context.GameState, rune);
         if (initialTarget == null)
         {
             return false;
@@ -73,9 +73,34 @@ public sealed class EiwazRuneBehavior : RuneBehavior
         context.EffectAnimationSystem.TrySpawnEiwazImpactAnimation(
             context.GameState,
             context.PrimaryTarget.Transform.Position);
+
+        var bonusDamage = context.PrimaryTarget.Data.MaxHealth *
+            EiwazTuning.GetBonusMaxHealthDamagePercent(context.Projectile.Impact.SourceRuneTier);
+        if (bonusDamage <= 0.001f)
+        {
+            return;
+        }
+
+        context.RuneEffectSystem.ApplyDirectDamage(
+            context.GameState,
+            context.PrimaryTarget,
+            bonusDamage,
+            sourceRuneType: RuneType.Eiwaz,
+            sourceRuneTier: context.Projectile.Impact.SourceRuneTier,
+            sourceRune: context.Projectile.OwnerRune,
+            checkIgnore: false);
     }
 
-    private static EnemyEntity? SelectHighestHealthEnemy(IReadOnlyList<EnemyEntity> enemies)
+    private static EnemyEntity? SelectHighestPriorityEnemy(GameState gameState, RuneEntity currentRune)
+    {
+        var reservedEnemyIds = GetReservedEnemyIds(gameState.Runes, currentRune);
+        var bestReservedAwareEnemy = SelectHighestPriorityEnemy(gameState.Enemies, reservedEnemyIds);
+        return bestReservedAwareEnemy ?? SelectHighestPriorityEnemy(gameState.Enemies, reservedEnemyIds: null);
+    }
+
+    private static EnemyEntity? SelectHighestPriorityEnemy(
+        IReadOnlyList<EnemyEntity> enemies,
+        HashSet<int>? reservedEnemyIds)
     {
         EnemyEntity? bestEnemy = null;
         var bestHealth = float.MinValue;
@@ -84,7 +109,8 @@ public sealed class EiwazRuneBehavior : RuneBehavior
         for (var i = 0; i < enemies.Count; i++)
         {
             var enemy = enemies[i];
-            if (!EnemyQuery.IsTargetable(enemy))
+            if (!EnemyQuery.IsTargetable(enemy) ||
+                (reservedEnemyIds != null && reservedEnemyIds.Contains(enemy.Id)))
             {
                 continue;
             }
@@ -99,5 +125,27 @@ public sealed class EiwazRuneBehavior : RuneBehavior
         }
 
         return bestEnemy;
+    }
+
+    private static HashSet<int> GetReservedEnemyIds(IReadOnlyList<RuneEntity> runes, RuneEntity currentRune)
+    {
+        var reservedEnemyIds = new HashSet<int>();
+
+        for (var i = 0; i < runes.Count; i++)
+        {
+            var rune = runes[i];
+            if (ReferenceEquals(rune, currentRune) ||
+                rune.Stats.Type != RuneType.Eiwaz ||
+                !rune.Presentation.IsCombatActive ||
+                !rune.State.IsEiwazAiming ||
+                !rune.State.EiwazTargetEnemyId.HasValue)
+            {
+                continue;
+            }
+
+            reservedEnemyIds.Add(rune.State.EiwazTargetEnemyId.Value);
+        }
+
+        return reservedEnemyIds;
     }
 }

@@ -80,12 +80,36 @@ public sealed class SowiloBeamSystem
                 continue;
             }
 
+            if (_runeEffectSystem != null && _runeEffectSystem.TryIgnoreIncomingAttackOrEffect(enemy))
+            {
+                continue;
+            }
+
             if (_runeEffectSystem != null &&
                 _runeEffectSystem.TryApplyExternalRuneAttackKill(
                     gameState,
                     enemy,
                     beam.OwnerRune.Stats.Type,
-                    beam.OwnerRune.Stats.Tier))
+                    beam.OwnerRune.Stats.Tier,
+                    checkIgnore: false))
+            {
+                continue;
+            }
+
+            if (_runeEffectSystem != null)
+            {
+                _runeEffectSystem.ApplyDirectDamage(
+                    gameState,
+                    enemy,
+                    beam.Damage,
+                    sourceRuneType: beam.OwnerRune.Stats.Type,
+                    sourceRuneTier: beam.OwnerRune.Stats.Tier,
+                    sourceRune: beam.OwnerRune,
+                    checkIgnore: false);
+                continue;
+            }
+
+            if (enemy.StatusEffects.TryIgnoreIncomingAttackOrEffect())
             {
                 continue;
             }

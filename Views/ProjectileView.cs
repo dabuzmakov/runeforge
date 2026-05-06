@@ -12,13 +12,21 @@ public sealed class ProjectileView : IDisposable
 
     private readonly IReadOnlyList<Bitmap> _thurisazFrames;
     private readonly Bitmap? _eiwazProjectileTexture;
+    private readonly Bitmap? _ingwazProjectileTexture;
+    private readonly Bitmap? _perthroProjectileTexture;
     private readonly Dictionary<int, SolidBrush> _brushCache = new();
     private readonly SolidBrush _fragmentBrush = new(Color.White);
 
-    public ProjectileView(IReadOnlyList<Bitmap> thurisazFrames, Bitmap? eiwazProjectileTexture)
+    public ProjectileView(
+        IReadOnlyList<Bitmap> thurisazFrames,
+        Bitmap? eiwazProjectileTexture,
+        Bitmap? ingwazProjectileTexture,
+        Bitmap? perthroProjectileTexture)
     {
         _thurisazFrames = thurisazFrames;
         _eiwazProjectileTexture = eiwazProjectileTexture;
+        _ingwazProjectileTexture = ingwazProjectileTexture;
+        _perthroProjectileTexture = perthroProjectileTexture;
     }
 
     public void Draw(Graphics graphics, ProjectileEntity projectile)
@@ -41,6 +49,12 @@ public sealed class ProjectileView : IDisposable
             return;
         }
 
+        if (projectile.Impact.SourceRuneType == RuneType.Ingwaz)
+        {
+            DrawIngwazProjectile(graphics, projectile);
+            return;
+        }
+
         var brush = GetBrush(projectile.Impact.Color);
         var diameter = projectile.Flight.Radius * 2f;
 
@@ -52,10 +66,23 @@ public sealed class ProjectileView : IDisposable
             diameter);
     }
 
+    public void DrawPerthroBoomerang(Graphics graphics, PerthroBoomerangEntity boomerang)
+    {
+        if (_perthroProjectileTexture == null)
+        {
+            return;
+        }
+
+        var size = boomerang.Radius * 2.2f;
+        DrawRotatedTexture(graphics, _perthroProjectileTexture, boomerang.Position, boomerang.RotationRadians, size, size);
+    }
+
     public void Dispose()
     {
         _fragmentBrush.Dispose();
         _eiwazProjectileTexture?.Dispose();
+        _ingwazProjectileTexture?.Dispose();
+        _perthroProjectileTexture?.Dispose();
 
         foreach (var brush in _brushCache.Values)
         {
@@ -137,6 +164,31 @@ public sealed class ProjectileView : IDisposable
         }
     }
 
+    private void DrawIngwazProjectile(Graphics graphics, ProjectileEntity projectile)
+    {
+        if (_ingwazProjectileTexture == null)
+        {
+            return;
+        }
+
+        var frameWidth = _ingwazProjectileTexture.Width / IngwazTuning.ProjectileFrameCount;
+        if (frameWidth <= 0)
+        {
+            return;
+        }
+
+        var frameIndex = GetAnimationFrameIndex(IngwazTuning.ProjectileFrameCount, IngwazTuning.ProjectileAnimationFrameDurationSeconds);
+        var sourceRectangle = new Rectangle(
+            frameIndex * frameWidth,
+            0,
+            frameWidth,
+            _ingwazProjectileTexture.Height);
+        var width = frameWidth * IngwazTuning.ProjectileVisualScaleMultiplier;
+        var height = _ingwazProjectileTexture.Height * IngwazTuning.ProjectileVisualScaleMultiplier;
+        var rotationRadians = GetProjectileRotation(projectile);
+        DrawRotatedTexture(graphics, _ingwazProjectileTexture, sourceRectangle, projectile.Transform.Position, rotationRadians, width, height);
+    }
+
     private SolidBrush GetBrush(Color color)
     {
         var key = color.ToArgb();
@@ -180,15 +232,37 @@ public sealed class ProjectileView : IDisposable
         float sizeWidth,
         float sizeHeight)
     {
+        DrawRotatedTexture(
+            graphics,
+            texture,
+            new Rectangle(0, 0, texture.Width, texture.Height),
+            center,
+            rotationRadians,
+            sizeWidth,
+            sizeHeight);
+    }
+
+    private static void DrawRotatedTexture(
+        Graphics graphics,
+        Bitmap texture,
+        Rectangle sourceRectangle,
+        System.Numerics.Vector2 center,
+        float rotationRadians,
+        float sizeWidth,
+        float sizeHeight)
+    {
         GraphicsState state = graphics.Save();
         graphics.TranslateTransform(center.X, center.Y);
         graphics.RotateTransform(rotationRadians * (180f / MathF.PI));
         graphics.DrawImage(
             texture,
-            -(sizeWidth * 0.5f),
-            -(sizeHeight * 0.5f),
-            sizeWidth,
-            sizeHeight);
+            new RectangleF(
+                -(sizeWidth * 0.5f),
+                -(sizeHeight * 0.5f),
+                sizeWidth,
+                sizeHeight),
+            sourceRectangle,
+            GraphicsUnit.Pixel);
         graphics.Restore(state);
     }
 }

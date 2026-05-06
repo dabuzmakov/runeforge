@@ -8,7 +8,13 @@ public sealed class GridPositionComponent
         Column = column;
     }
 
-    public int Row { get; }
+    public int Row { get; private set; }
 
-    public int Column { get; }
+    public int Column { get; private set; }
+
+    public void MoveTo(int row, int column)
+    {
+        Row = row;
+        Column = column;
+    }
 }

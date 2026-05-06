@@ -51,15 +51,21 @@ public sealed partial class RuneBoardController
         StartMerge(sourceRune, targetRune);
     }
 
-    private void UpdateBagVisualState(float deltaTime, Point mousePosition)
+    private void UpdateBottomControlVisualState(float deltaTime, Point mousePosition)
     {
         _isBagHovered = Board.BagBounds.Contains(mousePosition);
         _isDraggingOverBag = DraggedRune != null && _isBagHovered;
+        var isBagHoverActive = _isBagHovered && !_isDraggingOverBag;
 
         var targetBlend = _isDraggingOverBag ? 1f : 0f;
         _bagHoverBlend = Approach(_bagHoverBlend, targetBlend, deltaTime * 12f);
         State.Ui.UseOpenBagSprite = _isDraggingOverBag;
+        State.Ui.UseActiveBagSprite = isBagHoverActive;
         State.Ui.BagScale = 1f + (_bagHoverBlend * 0.1f) + EvaluateBagClickPulse() + EvaluateBagInsertPulse();
+
+        _isRerollHovered = DraggedRune == null && Board.RerollBounds.Contains(mousePosition);
+        State.Ui.UseActiveRerollButtonSprite = _isRerollHovered;
+        State.Ui.RerollScale = 1f + EvaluateRerollClickPulse();
     }
 
     private void UpdateRuneInteractionState(Point mousePosition)
@@ -148,6 +154,36 @@ public sealed partial class RuneBoardController
         State.Runes.Add(rune);
         _effectAnimations.TrySpawnRuneSpawnAnimation(State, GetBagCenter(), rune.Stats.Color);
         _bagClickPulseElapsed = 0f;
+    }
+
+    private void TryRerollRunePositions()
+    {
+        if (State.Runes.Count < 2 ||
+            HasTransientRuneAnimations() ||
+            !State.Economy.TrySpendRuneSpawnCost())
+        {
+            return;
+        }
+
+        var shuffledCells = new TableGrid.GridCell[State.Runes.Count];
+        for (var i = 0; i < State.Runes.Count; i++)
+        {
+            var rune = State.Runes[i];
+            shuffledCells[i] = Board.Grid.GetCell(rune.Grid.Row, rune.Grid.Column);
+        }
+
+        ShuffleOccupiedCells(shuffledCells);
+
+        for (var i = 0; i < State.Runes.Count; i++)
+        {
+            var rune = State.Runes[i];
+            var targetCell = shuffledCells[i];
+            rune.Grid.MoveTo(targetCell.Row, targetCell.Column);
+            rune.Transform.Position = targetCell.Center;
+            _effectAnimations.TrySpawnRuneSwapAnimation(State, rune.Transform.Position, rune.Stats.Color);
+        }
+
+        _rerollClickPulseElapsed = 0f;
     }
 
     private void PopulateFreeCellsBuffer()
@@ -255,6 +291,80 @@ public sealed partial class RuneBoardController
 
         var releaseProgress = (progress - BagInsertPulseChargeRatio) / (1f - BagInsertPulseChargeRatio);
         return (1f - releaseProgress) * BagInsertPulseScale;
+    }
+
+    private float EvaluateRerollClickPulse()
+    {
+        if (_rerollClickPulseElapsed >= RerollClickPulseDuration)
+        {
+            return 0f;
+        }
+
+        var progress = _rerollClickPulseElapsed / RerollClickPulseDuration;
+        if (progress <= RerollClickPulseChargeRatio)
+        {
+            var chargeProgress = progress / RerollClickPulseChargeRatio;
+            return SmoothStep(chargeProgress) * RerollClickPulseScale;
+        }
+
+        var releaseProgress = (progress - RerollClickPulseChargeRatio) / (1f - RerollClickPulseChargeRatio);
+        return (1f - releaseProgress) * RerollClickPulseScale;
+    }
+
+    private bool HasTransientRuneAnimations()
+    {
+        for (var i = 0; i < State.Runes.Count; i++)
+        {
+            if (State.Runes[i].Presentation.ShouldRenderAboveBag)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void ShuffleOccupiedCells(TableGrid.GridCell[] cells)
+    {
+        if (cells.Length <= 1)
+        {
+            return;
+        }
+
+        var originalCells = new TableGrid.GridCell[cells.Length];
+        Array.Copy(cells, originalCells, cells.Length);
+
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            for (var i = cells.Length - 1; i > 0; i--)
+            {
+                var swapIndex = _random.Next(i + 1);
+                (cells[i], cells[swapIndex]) = (cells[swapIndex], cells[i]);
+            }
+
+            var hasMovedRune = false;
+            for (var i = 0; i < cells.Length; i++)
+            {
+                if (cells[i].Row != originalCells[i].Row || cells[i].Column != originalCells[i].Column)
+                {
+                    hasMovedRune = true;
+                    break;
+                }
+            }
+
+            if (hasMovedRune)
+            {
+                return;
+            }
+        }
+
+        var firstCell = cells[0];
+        for (var i = 0; i < cells.Length - 1; i++)
+        {
+            cells[i] = cells[i + 1];
+        }
+
+        cells[^1] = firstCell;
     }
 
     private static float SmoothStep(float value)

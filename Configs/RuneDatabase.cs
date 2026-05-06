@@ -51,12 +51,19 @@ public static class RuneDatabase
             baseDamage: EiwazTuning.BaseDamage,
             projectileSpeed: EiwazTuning.ProjectileSpeed,
             projectileRadius: EiwazTuning.ProjectileRadius);
-        Add(entries, RuneType.Mannaz, RuneColor.Blue);
+        Add(entries, RuneType.Mannaz, RuneColor.Blue, baseAttackRate: 0.84f, baseDamage: 0.32f);
 
         Add(entries, RuneType.Fehu, RuneColor.Red);
         Add(entries, RuneType.Wunjo, RuneColor.Red);
-        Add(entries, RuneType.Algiz, RuneColor.Red, baseAttackRate: AlgizTuning.AttackIntervalSeconds, baseDamage: 1.8f);
-        Add(entries, RuneType.Ingwaz, RuneColor.Red);
+        Add(entries, RuneType.Algiz, RuneColor.Red, baseAttackRate: AlgizTuning.AttackIntervalSeconds, baseDamage: 2.45f);
+        Add(
+            entries,
+            RuneType.Ingwaz,
+            RuneColor.Red,
+            baseAttackRate: IngwazTuning.AttackIntervalSeconds,
+            baseDamage: 0f,
+            projectileSpeed: IngwazTuning.ProjectileSpeed,
+            projectileRadius: IngwazTuning.ProjectileRadius);
 
         Add(entries, RuneType.Ansuz, RuneColor.Green);
         Add(entries, RuneType.Isa, RuneColor.Green, baseAttackRate: 0.82f, baseDamage: 1.08f);
@@ -80,11 +87,18 @@ public static class RuneDatabase
             projectileSpeed: ThurisazTuning.ProjectileSpeed,
             projectileRadius: ThurisazTuning.ProjectileRadius);
         Add(entries, RuneType.Nauthiz, RuneColor.Yellow);
-        Add(entries, RuneType.Tiwaz, RuneColor.Yellow);
-        Add(entries, RuneType.Othala, RuneColor.Yellow);
+        Add(entries, RuneType.Tiwaz, RuneColor.Yellow, baseAttackRate: TiwazTuning.DischargeDurationSeconds, baseDamage: TiwazTuning.GetDischargeShotDamage(1));
+        Add(entries, RuneType.Othala, RuneColor.Yellow, baseAttackRate: OthalaTuning.BaseAttackIntervalSeconds, baseDamage: OthalaTuning.BaseDamage);
 
         Add(entries, RuneType.Gebo, RuneColor.Purple, baseAttackRate: 0.82f, baseDamage: 0.78f);
-        Add(entries, RuneType.Perthro, RuneColor.Purple);
+        Add(
+            entries,
+            RuneType.Perthro,
+            RuneColor.Purple,
+            baseAttackRate: PerthroTuning.CooldownSeconds,
+            baseDamage: 0f,
+            projectileSpeed: 0f,
+            projectileRadius: PerthroTuning.BoomerangRadius);
         Add(entries, RuneType.Laguz, RuneColor.Purple, baseAttackRate: LaguzTuning.CooldownSeconds, baseDamage: 0f);
 
         return entries;

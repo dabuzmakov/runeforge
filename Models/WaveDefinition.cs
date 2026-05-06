@@ -12,6 +12,8 @@ public sealed class WaveDefinition
 
     public required int HighestUnlockedTier { get; init; }
 
+    public required bool IsBossWave { get; init; }
+
     public required IReadOnlyList<EnemyType> AllowedArchetypes { get; init; }
 
     public required IReadOnlyList<EnemySpawnEntry> SpawnEntries { get; init; }
@@ -31,6 +33,7 @@ public sealed class WaveDefinition
             .OrderByDescending(static pair => pair.Key)
             .Select(static pair => $"T{pair.Key}:{pair.Value}"));
 
-        return $"Wave {WaveNumber} | Count {TotalEnemyCount} | Spawn {SpawnIntervalSeconds:0.00}s | MaxTier T{HighestUnlockedTier} | Types [{archetypeSummary}] | Tiers [{tierSummary}]";
+        var waveKind = IsBossWave ? "Boss" : "Regular";
+        return $"Wave {WaveNumber} | {waveKind} | Count {TotalEnemyCount} | Spawn {SpawnIntervalSeconds:0.00}s | MaxTier T{HighestUnlockedTier} | Types [{archetypeSummary}] | Tiers [{tierSummary}]";
     }
 }

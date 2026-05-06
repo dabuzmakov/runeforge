@@ -16,28 +16,78 @@ public sealed class WaveGenerator
     {
         var clampedWave = Math.Max(1, waveNumber);
         var random = new Random((clampedWave * 7919) + 17);
-        var unlockedArchetypes = GetUnlockedArchetypes(clampedWave);
-        var archetypeWeights = BuildArchetypeWeights(clampedWave, unlockedArchetypes);
         var highestUnlockedTier = 1 + ((clampedWave - 1) / _tuning.WavesPerTier);
-        var totalEnemies = CalculateTotalEnemies(clampedWave, archetypeWeights, highestUnlockedTier);
+
+        if (BossTuning.IsBossWave(clampedWave))
+        {
+            return GenerateBossWave(clampedWave, highestUnlockedTier, random);
+        }
+
+        return GenerateRegularWave(clampedWave, highestUnlockedTier, random);
+    }
+
+    private WaveDefinition GenerateRegularWave(int waveNumber, int highestUnlockedTier, Random random)
+    {
+        var unlockedArchetypes = GetUnlockedArchetypes(waveNumber);
+        var archetypeWeights = BuildArchetypeWeights(waveNumber, unlockedArchetypes);
+        var totalEnemies = CalculateTotalEnemies(waveNumber, archetypeWeights, highestUnlockedTier);
         var tierCounts = BuildTierCounts(highestUnlockedTier, totalEnemies);
-        var archetypeCounts = BuildArchetypeCounts(clampedWave, unlockedArchetypes, tierCounts.Values.Sum());
-        var spawnEntries = BuildSpawnEntries(archetypeCounts, tierCounts, random);
-        var spawnInterval = Math.Max(
-            _tuning.MinimumSpawnIntervalSeconds,
-            _tuning.BaseSpawnIntervalSeconds - ((clampedWave - 1) * _tuning.SpawnIntervalReductionPerWave));
+        var archetypeCounts = BuildArchetypeCounts(waveNumber, unlockedArchetypes, tierCounts.Values.Sum());
+        var spawnEntries = BuildSpawnEntries(archetypeCounts, tierCounts, random, waveNumber);
 
         return new WaveDefinition
         {
-            WaveNumber = clampedWave,
+            WaveNumber = waveNumber,
             TotalEnemyCount = spawnEntries.Count,
-            SpawnIntervalSeconds = spawnInterval,
+            SpawnIntervalSeconds = CalculateSpawnInterval(waveNumber),
             HighestUnlockedTier = highestUnlockedTier,
+            IsBossWave = false,
             AllowedArchetypes = unlockedArchetypes.Select(static entry => entry.Archetype).ToArray(),
             SpawnEntries = spawnEntries,
             ArchetypeCounts = archetypeCounts,
             TierCounts = tierCounts
         };
+    }
+
+    private WaveDefinition GenerateBossWave(int waveNumber, int highestUnlockedTier, Random random)
+    {
+        var bossArchetype = BossTuning.GetBossArchetype(waveNumber);
+        var bossSpawnEntry = new EnemySpawnEntry(
+            bossArchetype,
+            highestUnlockedTier,
+            EnemySpawnRank.Boss,
+            BossTuning.GetHealthMultiplier(waveNumber),
+            BossTuning.SizeMultiplier,
+            CalculateWaveSpeedMultiplier(waveNumber) * BossTuning.SpeedMultiplier);
+        var supportWave = GenerateRegularWave(waveNumber, highestUnlockedTier, random);
+        var supportEntries = BuildBossSupportEntries(supportWave);
+        var spawnEntries = new List<EnemySpawnEntry>(1 + supportEntries.Count)
+        {
+            bossSpawnEntry
+        };
+        spawnEntries.AddRange(supportEntries);
+        var archetypeCounts = CountArchetypes(spawnEntries);
+        var tierCounts = CountTiers(spawnEntries);
+
+        return new WaveDefinition
+        {
+            WaveNumber = waveNumber,
+            TotalEnemyCount = spawnEntries.Count,
+            SpawnIntervalSeconds = CalculateSpawnInterval(waveNumber),
+            HighestUnlockedTier = highestUnlockedTier,
+            IsBossWave = true,
+            AllowedArchetypes = archetypeCounts.Keys.OrderBy(static type => type).ToArray(),
+            SpawnEntries = spawnEntries,
+            ArchetypeCounts = archetypeCounts,
+            TierCounts = tierCounts
+        };
+    }
+
+    private float CalculateSpawnInterval(int waveNumber)
+    {
+        return Math.Max(
+            _tuning.MinimumSpawnIntervalSeconds,
+            _tuning.BaseSpawnIntervalSeconds - ((waveNumber - 1) * _tuning.SpawnIntervalReductionPerWave));
     }
 
     private IReadOnlyList<ArchetypeUnlockTuning> GetUnlockedArchetypes(int waveNumber)
@@ -53,11 +103,45 @@ public sealed class WaveGenerator
         IReadOnlyDictionary<EnemyType, float> archetypeWeights,
         int highestUnlockedTier)
     {
-        var waveBudget = _tuning.BaseWaveBudget + ((waveNumber - 1) * _tuning.WaveBudgetGrowth);
+        var waveBudget = CalculateWaveBudget(waveNumber);
         var tierWeights = BuildTierWeights(highestUnlockedTier);
         var weightedAverageTierCost = CalculateWeightedAverageTierCost(tierWeights);
         var weightedAverageArchetypeCost = CalculateWeightedAverageArchetypeCost(archetypeWeights);
         return Math.Max(1, (int)MathF.Round(waveBudget / (weightedAverageArchetypeCost * weightedAverageTierCost)));
+    }
+
+    private float CalculateWaveBudget(int waveNumber)
+    {
+        var waveBudget = _tuning.BaseWaveBudget + ((waveNumber - 1) * _tuning.WaveBudgetGrowth);
+
+        if (waveNumber > _tuning.LatePressureStartWave)
+        {
+            waveBudget += (waveNumber - _tuning.LatePressureStartWave) * _tuning.LatePressureBudgetGrowth;
+        }
+
+        if (waveNumber > _tuning.ExtremeLatePressureStartWave)
+        {
+            waveBudget += (waveNumber - _tuning.ExtremeLatePressureStartWave) * _tuning.ExtremeLatePressureBudgetGrowth;
+        }
+
+        return waveBudget;
+    }
+
+    private float CalculateWaveSpeedMultiplier(int waveNumber)
+    {
+        var speedMultiplier = 1f;
+
+        if (waveNumber > _tuning.LateSpeedStartWave)
+        {
+            speedMultiplier += (waveNumber - _tuning.LateSpeedStartWave) * _tuning.LateSpeedMultiplierGrowthPerWave;
+        }
+
+        if (waveNumber > _tuning.ExtremeSpeedStartWave)
+        {
+            speedMultiplier += (waveNumber - _tuning.ExtremeSpeedStartWave) * _tuning.ExtremeSpeedMultiplierGrowthPerWave;
+        }
+
+        return Math.Max(1f, speedMultiplier);
     }
 
     private Dictionary<int, int> BuildTierCounts(int highestUnlockedTier, int totalEnemies)
@@ -164,7 +248,8 @@ public sealed class WaveGenerator
     private List<EnemySpawnEntry> BuildSpawnEntries(
         IReadOnlyDictionary<EnemyType, int> archetypeCounts,
         IReadOnlyDictionary<int, int> tierCounts,
-        Random random)
+        Random random,
+        int waveNumber)
     {
         var archetypes = ExpandCounts(archetypeCounts);
         var tiers = ExpandCounts(tierCounts);
@@ -173,12 +258,43 @@ public sealed class WaveGenerator
         Shuffle(tiers, random);
 
         var result = new List<EnemySpawnEntry>(Math.Min(archetypes.Count, tiers.Count));
+        var speedMultiplier = CalculateWaveSpeedMultiplier(waveNumber);
         for (var i = 0; i < archetypes.Count && i < tiers.Count; i++)
         {
-            result.Add(new EnemySpawnEntry(archetypes[i], tiers[i]));
+            result.Add(new EnemySpawnEntry(archetypes[i], tiers[i], SpeedMultiplier: speedMultiplier));
         }
 
         return result;
+    }
+
+    private static List<EnemySpawnEntry> BuildBossSupportEntries(WaveDefinition regularWave)
+    {
+        if (regularWave.SpawnEntries.Count == 0)
+        {
+            return [];
+        }
+
+        var desiredCount = (int)MathF.Round(regularWave.SpawnEntries.Count * BossTuning.SupportWaveEntryFraction);
+        var supportCount = Math.Clamp(
+            desiredCount,
+            BossTuning.MinimumSupportWaveEntryCount,
+            BossTuning.MaximumSupportWaveEntryCount);
+        supportCount = Math.Min(supportCount, regularWave.SpawnEntries.Count);
+        return regularWave.SpawnEntries.Take(supportCount).ToList();
+    }
+
+    private static Dictionary<EnemyType, int> CountArchetypes(IEnumerable<EnemySpawnEntry> spawnEntries)
+    {
+        return spawnEntries
+            .GroupBy(static entry => entry.Archetype)
+            .ToDictionary(static group => group.Key, static group => group.Count());
+    }
+
+    private static Dictionary<int, int> CountTiers(IEnumerable<EnemySpawnEntry> spawnEntries)
+    {
+        return spawnEntries
+            .GroupBy(static entry => entry.Tier)
+            .ToDictionary(static group => group.Key, static group => group.Count());
     }
 
     private static List<T> ExpandCounts<T>(IReadOnlyDictionary<T, int> counts)

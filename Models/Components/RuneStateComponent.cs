@@ -13,6 +13,8 @@ public sealed class RuneStateComponent
     private float _algizSweepStepInterval;
     private int? _eiwazTargetEnemyId;
     private float _eiwazAimElapsed;
+    private float _tiwazStoredDamage;
+    private float _tiwazDischargeAttackInterval;
 
     public RuneStateComponent(RuneData runeData, int tier)
     {
@@ -52,6 +54,20 @@ public sealed class RuneStateComponent
     public float EiwazAimProgress => EiwazTuning.AimDurationSeconds <= 0f
         ? 1f
         : Math.Clamp(_eiwazAimElapsed / EiwazTuning.AimDurationSeconds, 0f, 1f);
+
+    public int JeraSharedStacks { get; private set; }
+
+    public float TiwazStoredDamage => _tiwazStoredDamage;
+
+    public float TiwazDischargeAttackInterval => _tiwazDischargeAttackInterval;
+
+    public int OthalaClusterSize { get; private set; }
+
+    public bool IsTiwazChargeEffectActive { get; private set; }
+
+    public bool IsTiwazDischargeIndicatorActive { get; private set; }
+
+    public float TiwazDischargeProgress { get; private set; }
 
     public void Update(RuneStatsComponent runeStats, float deltaTime)
     {
@@ -240,5 +256,68 @@ public sealed class RuneStateComponent
         }
 
         _eiwazAimElapsed = MathF.Min(EiwazTuning.AimDurationSeconds, _eiwazAimElapsed + deltaTime);
+    }
+
+    public void SetJeraSharedStacks(int sharedStacks)
+    {
+        JeraSharedStacks = Math.Max(0, sharedStacks);
+    }
+
+    public void SetOthalaClusterSize(int clusterSize)
+    {
+        OthalaClusterSize = Math.Max(0, clusterSize);
+    }
+
+    public void AddTiwazStoredDamage(float amount)
+    {
+        if (amount <= 0f)
+        {
+            return;
+        }
+
+        _tiwazStoredDamage += amount;
+    }
+
+    public float ConsumeTiwazStoredDamage(float amount)
+    {
+        if (amount <= 0f || _tiwazStoredDamage <= 0.001f)
+        {
+            return 0f;
+        }
+
+        var consumed = Math.Min(_tiwazStoredDamage, amount);
+        _tiwazStoredDamage -= consumed;
+        return consumed;
+    }
+
+    public void PrepareTiwazDischarge(float shotDamage)
+    {
+        if (_tiwazStoredDamage <= 0.001f || shotDamage <= 0.001f)
+        {
+            _tiwazDischargeAttackInterval = TiwazTuning.DischargeDurationSeconds;
+            return;
+        }
+
+        var exactShotCount = Math.Max(1f, _tiwazStoredDamage / shotDamage);
+        _tiwazDischargeAttackInterval = TiwazTuning.DischargeDurationSeconds / exactShotCount;
+    }
+
+    public void SetTiwazChargeEffectActive(bool isActive)
+    {
+        IsTiwazChargeEffectActive = isActive;
+    }
+
+    public void SetTiwazDischargeIndicatorActive(bool isActive)
+    {
+        IsTiwazDischargeIndicatorActive = isActive;
+        if (!isActive)
+        {
+            TiwazDischargeProgress = 0f;
+        }
+    }
+
+    public void SetTiwazDischargeProgress(float progress)
+    {
+        TiwazDischargeProgress = Math.Clamp(progress, 0f, 1f);
     }
 }

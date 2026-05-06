@@ -12,4 +12,5 @@ public readonly record struct EnemyStatusEffect(
     float Strength,
     float RemainingDurationSeconds,
     float TriggerIntervalSeconds,
-    float TimeUntilNextTriggerSeconds);
+    float TimeUntilNextTriggerSeconds,
+    RuneEntity? SourceRune = null);

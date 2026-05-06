@@ -6,11 +6,11 @@ public static class GeboTuning
 
     private static readonly float[] AttackSpeedBonusPercentByTier =
     [
-        12f,
-        16f,
+        14f,
         20f,
-        24f,
-        30f
+        26f,
+        32f,
+        38f
     ];
 
     public static float GetAttackSpeedBonusPercent(int tier)

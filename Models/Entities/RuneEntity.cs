@@ -19,6 +19,11 @@ public sealed class RuneEntity
         Buffs = new RuneBuffComponent();
         Cooldown = new CooldownComponent();
         EffectCooldown = new CooldownComponent();
+        if (runeData.Type == RuneType.Mannaz)
+        {
+            EffectCooldown.Remaining = MannazTuning.StormCooldownSeconds;
+        }
+
         SpecialAttack = new RuneSpecialAttackComponent();
         Presentation = new RunePresentationComponent(position);
     }

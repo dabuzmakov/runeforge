@@ -44,4 +44,66 @@ public static class EnemyQuery
 
         return bestEnemy;
     }
+
+    public static EnemyEntity? SelectRandomTargetableEnemy(IReadOnlyList<EnemyEntity> enemies, EnemyEntity? excludedEnemy = null)
+    {
+        EnemyEntity? selectedEnemy = null;
+        var candidateCount = 0;
+
+        for (var i = 0; i < enemies.Count; i++)
+        {
+            var enemy = enemies[i];
+            if (!IsTargetable(enemy) || ReferenceEquals(enemy, excludedEnemy))
+            {
+                continue;
+            }
+
+            candidateCount++;
+            if (Random.Shared.Next(candidateCount) == 0)
+            {
+                selectedEnemy = enemy;
+            }
+        }
+
+        return selectedEnemy;
+    }
+
+    public static List<EnemyEntity> SelectRandomTargetableEnemies(
+        IReadOnlyList<EnemyEntity> enemies,
+        int maxCount,
+        EnemyEntity? excludedEnemy = null)
+    {
+        var clampedCount = Math.Max(0, maxCount);
+        if (clampedCount == 0)
+        {
+            return [];
+        }
+
+        var selectedEnemies = new List<EnemyEntity>(Math.Min(clampedCount, enemies.Count));
+        var candidateCount = 0;
+
+        for (var i = 0; i < enemies.Count; i++)
+        {
+            var enemy = enemies[i];
+            if (!IsTargetable(enemy) || ReferenceEquals(enemy, excludedEnemy))
+            {
+                continue;
+            }
+
+            candidateCount++;
+            if (selectedEnemies.Count < clampedCount)
+            {
+                selectedEnemies.Add(enemy);
+                continue;
+            }
+
+            var replacementIndex = Random.Shared.Next(candidateCount);
+            if (replacementIndex < clampedCount)
+            {
+                selectedEnemies[replacementIndex] = enemy;
+            }
+        }
+
+        return selectedEnemies;
+    }
 }

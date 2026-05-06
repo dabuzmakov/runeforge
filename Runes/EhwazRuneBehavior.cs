@@ -17,7 +17,8 @@ public sealed class EhwazRuneBehavior : RuneBehavior
             chainDamage,
             context.Projectile.Impact.IsCriticalHit,
             RuneType.Ehwaz,
-            context.Projectile.Impact.SourceRuneTier);
+            context.Projectile.Impact.SourceRuneTier,
+            context.Projectile.OwnerRune);
 
         var chainTargets = SelectChainTargets(
             context.GameState.Enemies,
@@ -45,7 +46,8 @@ public sealed class EhwazRuneBehavior : RuneBehavior
                 chainDamage,
                 context.Projectile.Impact.IsCriticalHit,
                 RuneType.Ehwaz,
-                context.Projectile.Impact.SourceRuneTier);
+                context.Projectile.Impact.SourceRuneTier,
+                context.Projectile.OwnerRune);
         }
     }
 

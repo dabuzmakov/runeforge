@@ -29,6 +29,44 @@ public sealed class PathFollowComponent
         NextPathPointIndex = Math.Clamp(nextPathPointIndex, 1, path.Count - 1);
     }
 
+    public void MoveToDistance(TransformComponent transform, float pathDistance, IReadOnlyList<Vector2> path)
+    {
+        MoveToDistance(transform, pathDistance, path, PathGeometry.ComputeLength(path));
+    }
+
+    public void MoveToDistance(
+        TransformComponent transform,
+        float pathDistance,
+        IReadOnlyList<Vector2> path,
+        float totalLength)
+    {
+        if (path.Count < 2)
+        {
+            return;
+        }
+
+        var clampedDistance = Math.Clamp(pathDistance, 0f, totalLength);
+        transform.Position = PathGeometry.GetPointAtDistance(path, clampedDistance);
+        Progress = clampedDistance;
+
+        if (clampedDistance >= totalLength - 0.001f)
+        {
+            HasReachedGoal = true;
+            NextPathPointIndex = path.Count;
+            return;
+        }
+
+        HasReachedGoal = false;
+        var closestPoint = PathGeometry.GetClosestPointResult(path, transform.Position);
+        var nextPathPointIndex = closestPoint.SegmentIndex + 1;
+        if (Vector2.DistanceSquared(closestPoint.Point, closestPoint.SegmentEnd) <= 0.001f)
+        {
+            nextPathPointIndex++;
+        }
+
+        NextPathPointIndex = Math.Clamp(nextPathPointIndex, 1, path.Count - 1);
+    }
+
     public void Update(TransformComponent transform, float speed, float deltaTime, IReadOnlyList<Vector2> path)
     {
         if (HasReachedGoal || path.Count < 2)

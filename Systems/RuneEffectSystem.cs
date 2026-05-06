@@ -23,6 +23,7 @@ public sealed class RuneEffectSystem
     public void ApplyHitEffects(
         GameState gameState,
         IReadOnlyList<System.Numerics.Vector2> path,
+        float pathLength,
         ProjectileEntity projectile,
         EffectAnimationSystem effectAnimationSystem)
     {
@@ -32,22 +33,38 @@ public sealed class RuneEffectSystem
             return;
         }
 
+        if (TryIgnoreIncomingAttackOrEffect(targetEnemy))
+        {
+            return;
+        }
+
+        if (projectile.Impact.SourceRuneType == RuneType.Ingwaz)
+        {
+            RuneBehaviorRegistry.Get(projectile.Impact.SourceRuneType).OnProjectileHit(
+                new RuneHitContext(gameState, projectile, targetEnemy, path, pathLength, this, effectAnimationSystem));
+            return;
+        }
+
         if (!TryApplyExternalRuneAttackKill(
                 gameState,
                 targetEnemy,
                 projectile.Impact.SourceRuneType,
-                projectile.Impact.SourceRuneTier))
+                projectile.Impact.SourceRuneTier,
+                checkIgnore: false))
         {
             ApplyDamage(
                 gameState,
                 targetEnemy,
                 projectile.Impact.Damage,
                 projectile.Impact.IsCriticalHit ? DamagePopupStyle.Critical : DamagePopupStyle.Normal,
-                projectile.Impact.IsCriticalHit);
+                projectile.Impact.IsCriticalHit,
+                projectile.Impact.SourceRuneType,
+                projectile.OwnerRune,
+                checkIgnore: false);
         }
 
         RuneBehaviorRegistry.Get(projectile.Impact.SourceRuneType).OnProjectileHit(
-            new RuneHitContext(gameState, projectile, targetEnemy, path, this, effectAnimationSystem));
+            new RuneHitContext(gameState, projectile, targetEnemy, path, pathLength, this, effectAnimationSystem));
     }
 
     public void ApplyDirectDamage(
@@ -56,15 +73,22 @@ public sealed class RuneEffectSystem
         float damage,
         bool isCriticalHit = false,
         RuneType? sourceRuneType = null,
-        int sourceRuneTier = 1)
+        int sourceRuneTier = 1,
+        RuneEntity? sourceRune = null,
+        bool checkIgnore = true)
     {
         if (!targetEnemy.Data.IsAlive || targetEnemy.Path.HasReachedGoal || damage <= 0f)
         {
             return;
         }
 
+        if (checkIgnore && TryIgnoreIncomingAttackOrEffect(targetEnemy))
+        {
+            return;
+        }
+
         if (sourceRuneType.HasValue &&
-            TryApplyExternalRuneAttackKill(gameState, targetEnemy, sourceRuneType.Value, sourceRuneTier))
+            TryApplyExternalRuneAttackKill(gameState, targetEnemy, sourceRuneType.Value, sourceRuneTier, checkIgnore: false))
         {
             return;
         }
@@ -74,23 +98,18 @@ public sealed class RuneEffectSystem
             targetEnemy,
             damage,
             isCriticalHit ? DamagePopupStyle.Critical : DamagePopupStyle.Normal,
-            isCriticalHit);
+            isCriticalHit,
+            sourceRuneType,
+            sourceRune,
+            checkIgnore: false);
     }
 
-    public void ApplyIsaLaneSlow(GameState gameState)
+    public void ApplyIsaLaneSlow(GameState gameState, float slowPercent, float durationSeconds)
     {
-        var activeIsaTiers = gameState.Runes
-            .Where(static rune => rune.Stats.Type == RuneType.Isa && rune.Presentation.IsCombatActive)
-            .Select(static rune => rune.Stats.Tier)
-            .ToArray();
-
-        if (activeIsaTiers.Length == 0)
+        if (slowPercent <= 0f || durationSeconds <= 0f)
         {
             return;
         }
-
-        var slowPercent = IsaTuning.GetCombinedSlowPercent(activeIsaTiers);
-        var durationSeconds = IsaTuning.GetCombinedSlowDurationSeconds(activeIsaTiers);
 
         for (var i = 0; i < gameState.Enemies.Count; i++)
         {
@@ -107,13 +126,14 @@ public sealed class RuneEffectSystem
     public void TrySpawnAnsuzAllyFromKilledEnemy(
         GameState gameState,
         IReadOnlyList<System.Numerics.Vector2> path,
+        float pathLength,
         EnemyEntity sourceEnemy,
         int runeTier)
     {
         _ansuzAllySystem.TrySpawnFromKilledEnemy(
             gameState,
             path,
-            PathGeometry.ComputeLength(path),
+            pathLength,
             sourceEnemy,
             runeTier);
     }
@@ -136,6 +156,7 @@ public sealed class RuneEffectSystem
             splashDamage,
             projectile.Impact.SourceRuneType,
             projectile.Impact.SourceRuneTier,
+            projectile.OwnerRune,
             KenazTuning.IncludePrimaryTargetInSplash ? null : primaryTarget);
     }
 
@@ -147,6 +168,7 @@ public sealed class RuneEffectSystem
         float damage,
         RuneType? sourceRuneType = null,
         int sourceRuneTier = 1,
+        RuneEntity? sourceRune = null,
         EnemyEntity? excludedEnemy = null)
     {
         for (var i = 0; i < enemies.Count; i++)
@@ -164,13 +186,18 @@ public sealed class RuneEffectSystem
                 continue;
             }
 
-            if (sourceRuneType.HasValue &&
-                TryApplyExternalRuneAttackKill(gameState, enemy, sourceRuneType.Value, sourceRuneTier))
+            if (TryIgnoreIncomingAttackOrEffect(enemy))
             {
                 continue;
             }
 
-            ApplyDamage(gameState, enemy, damage);
+            if (sourceRuneType.HasValue &&
+                TryApplyExternalRuneAttackKill(gameState, enemy, sourceRuneType.Value, sourceRuneTier, checkIgnore: false))
+            {
+                continue;
+            }
+
+            ApplyDamage(gameState, enemy, damage, sourceRuneType: sourceRuneType, sourceRune: sourceRune, checkIgnore: false);
         }
     }
 
@@ -186,10 +213,8 @@ public sealed class RuneEffectSystem
             return;
         }
 
-        var availableEnemies = gameState.Enemies
-            .Where(static enemy => enemy.Data.IsAlive && !enemy.Path.HasReachedGoal)
-            .ToArray();
-        if (availableEnemies.Length == 0)
+        var epicenterEnemy = EnemyQuery.SelectRandomTargetableEnemy(gameState.Enemies);
+        if (epicenterEnemy == null)
         {
             return;
         }
@@ -197,7 +222,6 @@ public sealed class RuneEffectSystem
         var radius = BerkanoTuning.GetPoisonRadius(runeTier);
         var durationSeconds = BerkanoTuning.GetPoisonDurationSeconds(runeTier);
         var damagePerTick = BerkanoTuning.GetPoisonDamagePerTick(runeTier) * projectile.Impact.EffectDamageMultiplier;
-        var epicenterEnemy = availableEnemies[Random.Shared.Next(availableEnemies.Length)];
         var center = epicenterEnemy.Transform.Position;
         var appliedToAnyEnemy = false;
 
@@ -216,10 +240,16 @@ public sealed class RuneEffectSystem
                 continue;
             }
 
+            if (TryIgnoreIncomingAttackOrEffect(enemy))
+            {
+                continue;
+            }
+
             enemy.StatusEffects.ApplyPoison(
                 damagePerTick,
                 durationSeconds,
-                BerkanoTuning.PoisonTickIntervalSeconds);
+                BerkanoTuning.PoisonTickIntervalSeconds,
+                projectile.OwnerRune);
             appliedToAnyEnemy = true;
         }
 
@@ -229,9 +259,33 @@ public sealed class RuneEffectSystem
         }
     }
 
+    public void ApplyIngwazBurn(EnemyEntity targetEnemy, int runeTier, RuneEntity? sourceRune = null)
+    {
+        if (!targetEnemy.Data.IsAlive || targetEnemy.Path.HasReachedGoal)
+        {
+            return;
+        }
+
+        if (TryIgnoreIncomingAttackOrEffect(targetEnemy))
+        {
+            return;
+        }
+
+        targetEnemy.StatusEffects.ApplyBurn(
+            IngwazTuning.GetBurnCurrentHealthDamagePercentPerTick(runeTier),
+            IngwazTuning.GetBurnBaseDamagePerTick(runeTier),
+            IngwazTuning.GetBurnDurationSeconds(runeTier),
+            sourceRune);
+    }
+
     public void ApplyNauthizShatter(EnemyEntity targetEnemy, int runeTier)
     {
         if (!targetEnemy.Data.IsAlive || targetEnemy.Path.HasReachedGoal)
+        {
+            return;
+        }
+
+        if (TryIgnoreIncomingAttackOrEffect(targetEnemy))
         {
             return;
         }
@@ -240,14 +294,55 @@ public sealed class RuneEffectSystem
             NauthizTuning.GetIncomingDamageBonusPercentPerStack(runeTier));
     }
 
+    public void ApplyPerthroBoomerangHit(
+        GameState gameState,
+        EnemyEntity targetEnemy,
+        float damage,
+        int runeTier)
+    {
+        if (!targetEnemy.Data.IsAlive || targetEnemy.Path.HasReachedGoal)
+        {
+            return;
+        }
+
+        if (TryIgnoreIncomingAttackOrEffect(targetEnemy))
+        {
+            return;
+        }
+
+        var wasMarked = targetEnemy.StatusEffects.IsPerthroMarked;
+        var healthThreshold = targetEnemy.Data.MaxHealth * PerthroTuning.GetExecuteHealthPercentThreshold(runeTier);
+        if (wasMarked && targetEnemy.Data.Health <= healthThreshold)
+        {
+            _effectAnimationSystem.TrySpawnLaguzExecuteAnimation(gameState, targetEnemy.Transform.Position);
+            targetEnemy.StatusEffects.ClearPerthroMark();
+            targetEnemy.Data.MarkDead();
+            return;
+        }
+
+        ApplyDamage(gameState, targetEnemy, damage);
+        if (targetEnemy.Data.IsAlive)
+        {
+            targetEnemy.StatusEffects.ApplyPerthroMark();
+        }
+    }
+
     public void ApplyDamage(
         GameState gameState,
         EnemyEntity targetEnemy,
         float rawDamage,
         DamagePopupStyle style = DamagePopupStyle.Normal,
-        bool isCriticalHit = false)
+        bool isCriticalHit = false,
+        RuneType? sourceRuneType = null,
+        RuneEntity? sourceRune = null,
+        bool checkIgnore = true)
     {
         if (!targetEnemy.Data.IsAlive || targetEnemy.Path.HasReachedGoal || rawDamage <= 0f)
+        {
+            return;
+        }
+
+        if (checkIgnore && TryIgnoreIncomingAttackOrEffect(targetEnemy))
         {
             return;
         }
@@ -255,15 +350,32 @@ public sealed class RuneEffectSystem
         var modifiedDamage = targetEnemy.StatusEffects.ApplyIncomingDamageMultiplier(rawDamage);
         _damagePopupSystem.Spawn(gameState, targetEnemy, modifiedDamage, style);
         targetEnemy.Data.TakeDamage(modifiedDamage, isCriticalHit);
+        TryChargeAdjacentTiwazRunes(gameState, sourceRune, modifiedDamage);
+
+        if (!targetEnemy.Data.IsAlive && !targetEnemy.Path.HasReachedGoal && sourceRuneType == RuneType.Jera)
+        {
+            RegisterJeraKill(gameState);
+        }
+    }
+
+    public void RegisterRuneDamageDealt(GameState gameState, RuneEntity? sourceRune, float dealtDamage)
+    {
+        TryChargeAdjacentTiwazRunes(gameState, sourceRune, dealtDamage);
     }
 
     public bool TryApplyExternalRuneAttackKill(
         GameState gameState,
         EnemyEntity targetEnemy,
         RuneType sourceRuneType,
-        int sourceRuneTier)
+        int sourceRuneTier,
+        bool checkIgnore = true)
     {
         if (!targetEnemy.Data.IsAlive || targetEnemy.Path.HasReachedGoal)
+        {
+            return false;
+        }
+
+        if (checkIgnore && TryIgnoreIncomingAttackOrEffect(targetEnemy))
         {
             return false;
         }
@@ -293,6 +405,64 @@ public sealed class RuneEffectSystem
 
         _effectAnimationSystem.TrySpawnLaguzExecuteAnimation(gameState, targetEnemy.Transform.Position);
         targetEnemy.Data.MarkDead();
+
+        if (sourceRuneType == RuneType.Jera)
+        {
+            RegisterJeraKill(gameState);
+        }
+
         return true;
+    }
+
+    public bool TryIgnoreIncomingAttackOrEffect(EnemyEntity targetEnemy)
+    {
+        return targetEnemy.StatusEffects.TryIgnoreIncomingAttackOrEffect();
+    }
+
+    private void RegisterJeraKill(GameState gameState)
+    {
+        if (!gameState.Jera.RegisterKill())
+        {
+            return;
+        }
+
+        for (var i = 0; i < gameState.Runes.Count; i++)
+        {
+            var rune = gameState.Runes[i];
+            if (rune.Stats.Type != RuneType.Jera)
+            {
+                continue;
+            }
+
+            rune.State.SetJeraSharedStacks(gameState.Jera.SharedStacks);
+            rune.Presentation.TriggerMergePop();
+            _effectAnimationSystem.TrySpawnJeraUpgradeAnimation(gameState, rune.Transform.Position);
+        }
+    }
+
+    private static void TryChargeAdjacentTiwazRunes(GameState gameState, RuneEntity? sourceRune, float dealtDamage)
+    {
+        if (sourceRune == null || dealtDamage <= 0.001f || !gameState.Tiwaz.IsCharging || sourceRune.Stats.Type == RuneType.Tiwaz)
+        {
+            return;
+        }
+
+        for (var i = 0; i < gameState.Runes.Count; i++)
+        {
+            var rune = gameState.Runes[i];
+            if (rune.Stats.Type != RuneType.Tiwaz)
+            {
+                continue;
+            }
+
+            var rowDistance = Math.Abs(rune.Grid.Row - sourceRune.Grid.Row);
+            var columnDistance = Math.Abs(rune.Grid.Column - sourceRune.Grid.Column);
+            if ((rowDistance + columnDistance) != 1)
+            {
+                continue;
+            }
+
+            rune.State.AddTiwazStoredDamage(dealtDamage * TiwazTuning.GetChargeFraction(rune.Stats.Tier));
+        }
     }
 }

@@ -7,6 +7,29 @@ namespace runeforge.Systems;
 
 public sealed class EffectAnimationSystem
 {
+
+    public void UpdateDelayedDirectRuneDamage(GameState gameState, float deltaTime, RuneEffectSystem runeEffectSystem)
+    {
+        for (var i = gameState.DelayedDirectRuneDamage.Count - 1; i >= 0; i--)
+        {
+            var delayedDamage = gameState.DelayedDirectRuneDamage[i];
+            delayedDamage.RemainingDelaySeconds -= deltaTime;
+            if (delayedDamage.RemainingDelaySeconds > 0f)
+            {
+                continue;
+            }
+
+            runeEffectSystem.ApplyDirectDamage(
+                gameState,
+                delayedDamage.TargetEnemy,
+                delayedDamage.Damage,
+                sourceRuneType: delayedDamage.SourceRuneType,
+                sourceRuneTier: delayedDamage.SourceRuneTier,
+                sourceRune: delayedDamage.SourceRune);
+            gameState.DelayedDirectRuneDamage.RemoveAt(i);
+        }
+    }
+
     public void Update(GameState gameState, float deltaTime)
     {
         for (var i = gameState.VisualEffects.Count - 1; i >= 0; i--)
@@ -34,6 +57,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnMergeAnimation(GameState gameState, Vector2 position, RuneColor color)
     {
+
         if (!EffectRegistry.TryCreateMergeEffect(position, color, out var animation) || animation == null)
         {
             return;
@@ -44,6 +68,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnBerkanoPoisonAnimation(GameState gameState, Vector2 position)
     {
+
         if (!EffectRegistry.TryCreateBerkanoPoisonEffect(position, out var animation, BerkanoTuning.PoisonEffectScale) || animation == null)
         {
             return;
@@ -54,6 +79,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnAlgizSweepAnimation(GameState gameState, Vector2 position, float rotationRadians)
     {
+
         if (!EffectRegistry.TryCreateAlgizSweepEffect(position, rotationRadians, out var animation, AlgizTuning.EffectScale) || animation == null)
         {
             return;
@@ -64,6 +90,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnKenazExplosionAnimation(GameState gameState, Vector2 position)
     {
+
         if (!EffectRegistry.TryCreateKenazExplosionEffect(position, out var animation, KenazTuning.ExplosionEffectScale) || animation == null)
         {
             return;
@@ -74,6 +101,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnAnsuzImpactAnimation(GameState gameState, Vector2 position, float? scale = null)
     {
+
         if (!EffectRegistry.TryCreateAnsuzImpactEffect(position, out var animation, scale) || animation == null)
         {
             return;
@@ -82,8 +110,53 @@ public sealed class EffectAnimationSystem
         gameState.VisualEffects.Add(animation);
     }
 
+    public void TrySpawnJeraUpgradeAnimation(GameState gameState, Vector2 position)
+    {
+
+        if (!EffectRegistry.TryCreateJeraUpgradeEffect(position, out var animation, JeraTuning.EffectScale) || animation == null)
+        {
+            return;
+        }
+
+        gameState.VisualEffects.Add(animation);
+    }
+
+    public void TrySpawnMannazLightningAnimation(GameState gameState, EnemyEntity targetEnemy)
+    {
+
+        if (!EffectRegistry.TryCreateMannazLightningEffect(
+            targetEnemy.Transform.Position,
+            targetEnemy,
+            out var animation,
+            MannazTuning.LightningEffectScale) || animation == null)
+        {
+            return;
+        }
+
+        gameState.VisualEffects.Add(animation);
+    }
+
+    public void QueueDelayedMannazLightningHit(
+        GameState gameState,
+        RuneEntity sourceRune,
+        EnemyEntity targetEnemy,
+        float damage)
+    {
+        var definition = EffectRegistry.Get(EffectType.MannazLightning);
+        gameState.DelayedDirectRuneDamage.Add(new DelayedDirectRuneDamage
+        {
+            TargetEnemy = targetEnemy,
+            SourceRune = sourceRune,
+            Damage = damage,
+            SourceRuneType = sourceRune.Stats.Type,
+            SourceRuneTier = sourceRune.Stats.Tier,
+            RemainingDelaySeconds = definition.FrameCount * definition.FrameDuration * 0.6f
+        });
+    }
+
     public void TrySpawnLaguzExecuteAnimation(GameState gameState, Vector2 position)
     {
+
         if (!EffectRegistry.TryCreateLaguzExecuteEffect(position, out var animation) || animation == null)
         {
             return;
@@ -94,6 +167,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnEiwazImpactAnimation(GameState gameState, Vector2 position)
     {
+
         if (!EffectRegistry.TryCreateEiwazImpactEffect(position, out var animation) || animation == null)
         {
             return;
@@ -104,6 +178,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnEhwazChainHitAnimation(GameState gameState, EnemyEntity targetEnemy)
     {
+
         if (!EffectRegistry.TryCreateEhwazChainHitEffect(
             targetEnemy.Transform.Position,
             targetEnemy,
@@ -121,6 +196,7 @@ public sealed class EffectAnimationSystem
         float fromPathDistance,
         float toPathDistance)
     {
+
         var points = PathGeometry.GetPointsInDistanceRange(path, fromPathDistance, toPathDistance);
         if (points.Length < 2)
         {
@@ -132,6 +208,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnHagalazExplosionAnimation(GameState gameState, Vector2 position)
     {
+
         if (!EffectRegistry.TryCreateHagalazExplosionEffect(
             position,
             out var animation,
@@ -145,6 +222,7 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnRuneSpawnAnimation(GameState gameState, Vector2 position, RuneColor color)
     {
+
         if (!EffectRegistry.TryCreateRuneSpawnEffect(position, color, out var animation) || animation == null)
         {
             return;
@@ -155,7 +233,30 @@ public sealed class EffectAnimationSystem
 
     public void TrySpawnRuneRemoveAnimation(GameState gameState, Vector2 position, RuneColor color)
     {
+
         if (!EffectRegistry.TryCreateRuneRemoveEffect(position, color, out var animation) || animation == null)
+        {
+            return;
+        }
+
+        gameState.VisualEffects.Add(animation);
+    }
+
+    public void TrySpawnRuneSwapAnimation(GameState gameState, Vector2 position, RuneColor color)
+    {
+
+        if (!EffectRegistry.TryCreateRuneSwapEffect(position, color, out var animation) || animation == null)
+        {
+            return;
+        }
+
+        gameState.VisualEffects.Add(animation);
+    }
+
+    public void TrySpawnTeleportAnimation(GameState gameState, Vector2 position, float? scale = null)
+    {
+
+        if (!EffectRegistry.TryCreateTeleportEffect(position, out var animation, scale) || animation == null)
         {
             return;
         }

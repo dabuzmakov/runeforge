@@ -7,10 +7,14 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Assets\App\runeforge-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Assets\Sprites\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\App\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\Backgrounds\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\Runes\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\UI\**\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\Effects\**\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\Fonts\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

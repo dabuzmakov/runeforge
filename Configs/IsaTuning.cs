@@ -6,32 +6,32 @@ public static class IsaTuning
 {
     private static readonly IsaTierValues[] TierValues =
     [
-        new IsaTierValues(4.6f, 0.18f, 1.8f),
-        new IsaTierValues(4.2f, 0.21f, 2.0f),
-        new IsaTierValues(3.8f, 0.24f, 2.2f),
-        new IsaTierValues(3.4f, 0.27f, 2.4f),
-        new IsaTierValues(3.0f, 0.30f, 2.6f)
+        new IsaTierValues(5.1f, 0.08f, 0.95f),
+        new IsaTierValues(4.7f, 0.09f, 1.05f),
+        new IsaTierValues(4.3f, 0.11f, 1.20f),
+        new IsaTierValues(3.9f, 0.13f, 1.35f),
+        new IsaTierValues(3.5f, 0.15f, 1.50f)
     ];
 
     private static readonly float[] AdditionalIsaContributionWeights =
     [
         1f,
-        0.6f,
-        0.4f,
-        0.28f,
-        0.2f,
-        0.14f,
-        0.1f,
-        0.07f
+        0.45f,
+        0.25f,
+        0.15f,
+        0.10f,
+        0.06f,
+        0.04f,
+        0.03f
     ];
 
     private static readonly float[] MaxCombinedSlowPercentByHighestTier =
     [
-        0.28f,
-        0.34f,
-        0.40f,
-        0.47f,
-        0.55f
+        0.10f,
+        0.13f,
+        0.16f,
+        0.19f,
+        0.22f
     ];
 
     public static IsaTierValues GetValues(int tier)
@@ -72,6 +72,14 @@ public static class IsaTuning
             .Select(static tier => GetValues(tier).SlowDurationSeconds)
             .DefaultIfEmpty(0f)
             .Max();
+    }
+
+    public static float GetPulseIntervalSeconds(IEnumerable<int> isaTiers)
+    {
+        return isaTiers
+            .Select(static tier => GetValues(tier).TriggerIntervalSeconds)
+            .DefaultIfEmpty(float.MaxValue)
+            .Min();
     }
 
     public static float GetMaxCombinedSlowPercent(int highestIsaTier)

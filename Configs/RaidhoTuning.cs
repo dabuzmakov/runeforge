@@ -8,29 +8,29 @@ public static class RaidhoTuning
 
     private static readonly float[] BaseAttackIntervalSecondsByTier =
     [
-        0.5f,
-        0.45f,
-        0.40f,
-        0.35f,
-        0.30f
+        0.62f,
+        0.58f,
+        0.54f,
+        0.50f,
+        0.46f
     ];
 
     private static readonly float[] OverloadDurationSecondsByTier =
     [
-        3.0f,
-        5.0f,
-        7.0f,
-        9.0f,
-        11.0f
+        2.5f,
+        3.5f,
+        4.5f,
+        5.5f,
+        6.5f
     ];
 
     private static readonly float[] OverloadAttackSpeedMultiplierByTier =
     [
-        2.0f,
-        2.5f,
-        3.0f,
-        3.5f,
-        4.0f
+        1.35f,
+        1.50f,
+        1.70f,
+        1.90f,
+        2.10f
     ];
 
     public static float GetBaseAttackIntervalSeconds(int tier)

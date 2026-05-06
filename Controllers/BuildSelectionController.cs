@@ -5,11 +5,15 @@ namespace runeforge.Controllers;
 
 public sealed class BuildSelectionController
 {
-    private readonly GameBoard _board;
+    private readonly IReadOnlyList<RuneOptionLayout> _optionLayouts;
+    private readonly IReadOnlyList<Rectangle> _selectedSlots;
+    private readonly Rectangle _startButtonBounds;
 
     public BuildSelectionController(GameBoard board)
     {
-        _board = board;
+        _optionLayouts = BuildSelectionLayout.CreateOptionLayouts(board.ViewportBounds);
+        _selectedSlots = BuildSelectionLayout.CreateSelectedBuildSlots(board.ViewportBounds);
+        _startButtonBounds = BuildSelectionLayout.GetStartButtonBounds(board.ViewportBounds);
     }
 
     public void Update(GameState gameState, float deltaTime, Point mousePosition, bool isLeftMouseDown, ref bool wasLeftMouseDown)
@@ -34,10 +38,9 @@ public sealed class BuildSelectionController
             return;
         }
 
-        var selectedSlots = BuildSelectionLayout.CreateSelectedBuildSlots(_board.ViewportBounds);
-        for (var i = 0; i < buildSelection.SelectedRunes.Count && i < selectedSlots.Count; i++)
+        for (var i = 0; i < buildSelection.SelectedRunes.Count && i < _selectedSlots.Count; i++)
         {
-            if (!selectedSlots[i].Contains(mousePosition))
+            if (!_selectedSlots[i].Contains(mousePosition))
             {
                 continue;
             }
@@ -47,24 +50,36 @@ public sealed class BuildSelectionController
             return;
         }
 
-        foreach (var option in BuildSelectionLayout.CreateOptionLayouts(_board.ViewportBounds))
+        foreach (var option in _optionLayouts)
         {
             if (!option.CardBounds.Contains(mousePosition))
             {
                 continue;
             }
 
-            StartAdd(buildSelection, option.RuneType);
+            ToggleOption(buildSelection, option.RuneType);
             wasLeftMouseDown = isLeftMouseDown;
             return;
         }
 
-        if (buildSelection.CanStart && BuildSelectionLayout.GetStartButtonBounds(_board.ViewportBounds).Contains(mousePosition))
+        if (buildSelection.CanStart && _startButtonBounds.Contains(mousePosition))
         {
             buildSelection.IsOpen = false;
         }
 
         wasLeftMouseDown = isLeftMouseDown;
+    }
+
+    private void ToggleOption(BuildSelectionState buildSelection, RuneType runeType)
+    {
+        var selectedIndex = buildSelection.SelectedRunes.IndexOf(runeType);
+        if (selectedIndex >= 0)
+        {
+            StartRemove(buildSelection, runeType, selectedIndex);
+            return;
+        }
+
+        StartAdd(buildSelection, runeType);
     }
 
     private void StartAdd(BuildSelectionState buildSelection, RuneType runeType)
@@ -74,15 +89,7 @@ public sealed class BuildSelectionController
             return;
         }
 
-        RuneOptionLayout? sourceOption = null;
-        foreach (var option in BuildSelectionLayout.CreateOptionLayouts(_board.ViewportBounds))
-        {
-            if (option.RuneType == runeType)
-            {
-                sourceOption = option;
-                break;
-            }
-        }
+        var sourceOption = FindOption(runeType);
 
         if (sourceOption == null)
         {
@@ -90,7 +97,7 @@ public sealed class BuildSelectionController
         }
 
         var targetSlotIndex = buildSelection.SelectedRunes.Count;
-        var targetSlot = BuildSelectionLayout.CreateSelectedBuildSlots(_board.ViewportBounds)[targetSlotIndex];
+        var targetSlot = _selectedSlots[targetSlotIndex];
         buildSelection.ActiveAnimation = new BuildSelectionAnimation(
             BuildSelectionAnimationKind.Add,
             runeType,
@@ -101,22 +108,14 @@ public sealed class BuildSelectionController
 
     private void StartRemove(BuildSelectionState buildSelection, RuneType runeType, int slotIndex)
     {
-        RuneOptionLayout? targetOption = null;
-        foreach (var option in BuildSelectionLayout.CreateOptionLayouts(_board.ViewportBounds))
-        {
-            if (option.RuneType == runeType)
-            {
-                targetOption = option;
-                break;
-            }
-        }
+        var targetOption = FindOption(runeType);
 
         if (targetOption == null)
         {
             return;
         }
 
-        var sourceSlot = BuildSelectionLayout.CreateSelectedBuildSlots(_board.ViewportBounds)[slotIndex];
+        var sourceSlot = _selectedSlots[slotIndex];
         buildSelection.ActiveAnimation = new BuildSelectionAnimation(
             BuildSelectionAnimationKind.Remove,
             runeType,
@@ -153,12 +152,59 @@ public sealed class BuildSelectionController
 
     private void UpdateHover(BuildSelectionState buildSelection, Point mousePosition, float deltaTime)
     {
-        foreach (var option in BuildSelectionLayout.CreateOptionLayouts(_board.ViewportBounds))
+        RuneOptionLayout? hoveredOption = null;
+
+        var isStartButtonHovered = buildSelection.CanStart &&
+            _startButtonBounds.Contains(mousePosition);
+        buildSelection.StartButtonHoverAmount = Approach(
+            buildSelection.StartButtonHoverAmount,
+            isStartButtonHovered ? 1f : 0f,
+            deltaTime * 10f);
+
+        foreach (var option in _optionLayouts)
         {
+            var isHovered = option.CardBounds.Contains(mousePosition);
+            if (isHovered)
+            {
+                hoveredOption = option;
+            }
+
             var current = buildSelection.OptionHoverAmounts[option.RuneType];
-            var target = option.CardBounds.Contains(mousePosition) ? 1f : 0f;
+            var target = isHovered ? 1f : 0f;
             buildSelection.OptionHoverAmounts[option.RuneType] = Approach(current, target, deltaTime * 10f);
         }
+
+        if (hoveredOption.HasValue)
+        {
+            var hoveredRuneType = hoveredOption.Value.RuneType;
+            if (buildSelection.PendingTooltipRuneType != hoveredRuneType)
+            {
+                buildSelection.PendingTooltipRuneType = hoveredRuneType;
+                buildSelection.PendingTooltipHoverSeconds = 0f;
+                buildSelection.HoveredRuneType = null;
+            }
+            else
+            {
+                buildSelection.PendingTooltipHoverSeconds += Math.Max(0f, deltaTime);
+                if (buildSelection.PendingTooltipHoverSeconds >= BuildSelectionState.TooltipShowDelaySeconds)
+                {
+                    buildSelection.HoveredRuneType = hoveredRuneType;
+                    buildSelection.HoveredCardBounds = hoveredOption.Value.CardBounds;
+                    buildSelection.TooltipAnchor = new Point(
+                        hoveredOption.Value.CardBounds.Right + 16,
+                        hoveredOption.Value.CardBounds.Top + 8);
+                }
+            }
+        }
+        else
+        {
+            buildSelection.PendingTooltipRuneType = null;
+            buildSelection.PendingTooltipHoverSeconds = 0f;
+            buildSelection.HoveredRuneType = null;
+        }
+
+        var tooltipTarget = buildSelection.HoveredRuneType.HasValue ? 1f : 0f;
+        buildSelection.TooltipOpacity = Approach(buildSelection.TooltipOpacity, tooltipTarget, deltaTime * 12f);
     }
 
     private static float Approach(float value, float target, float step)
@@ -174,5 +220,18 @@ public sealed class BuildSelectionController
     private static Vector2 GetCenter(Rectangle bounds)
     {
         return new Vector2(bounds.Left + (bounds.Width * 0.5f), bounds.Top + (bounds.Height * 0.5f));
+    }
+
+    private RuneOptionLayout? FindOption(RuneType runeType)
+    {
+        foreach (var option in _optionLayouts)
+        {
+            if (option.RuneType == runeType)
+            {
+                return option;
+            }
+        }
+
+        return null;
     }
 }

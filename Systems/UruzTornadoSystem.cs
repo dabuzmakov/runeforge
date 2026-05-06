@@ -63,7 +63,8 @@ public sealed class UruzTornadoSystem
                 enemy,
                 damage,
                 sourceRuneType: RuneType.Uruz,
-                sourceRuneTier: tornado.OwnerRune.Stats.Tier);
+                sourceRuneTier: tornado.OwnerRune.Stats.Tier,
+                sourceRune: tornado.OwnerRune);
 
             if (consumedMark)
             {

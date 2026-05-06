@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using System.Numerics;
 using runeforge.Configs;
 using runeforge.Models;
+using runeforge.Systems;
 
 namespace runeforge.Views;
 
@@ -75,21 +76,7 @@ public sealed class UruzTornadoView : IDisposable
 
     private static string ResolveTexturePath()
     {
-        string[] candidatePaths =
-        [
-            Path.Combine(AppContext.BaseDirectory, "Assets", "Effects", "uruz-effect.png"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Assets", "Effects", "uruz-effect.png"))
-        ];
-
-        foreach (var candidatePath in candidatePaths)
-        {
-            if (File.Exists(candidatePath))
-            {
-                return candidatePath;
-            }
-        }
-
-        throw new FileNotFoundException("Could not locate Assets/Effects/uruz-effect.png.");
+        return AssetResolver.ResolveFile("Effects", "SpriteSheets", "uruz-tornado.png");
     }
 
     private static Bitmap LoadBitmap(string path)

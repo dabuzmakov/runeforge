@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Globalization;
 
 namespace runeforge.Models;
 
@@ -17,7 +18,9 @@ public sealed class DamagePopupInstance
         Position = sourceEnemy.Transform.Position;
         SourceRadius = sourceEnemy.Data.Radius;
         Velocity = sourceEnemy.CurrentVelocity;
-        Text = ((int)MathF.Round(damage)).ToString();
+        Text = damage < 1f
+            ? damage.ToString("0.#", CultureInfo.CurrentCulture)
+            : ((int)MathF.Round(damage)).ToString(CultureInfo.CurrentCulture);
         Style = style;
     }
 

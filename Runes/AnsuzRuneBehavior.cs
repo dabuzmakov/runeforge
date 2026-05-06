@@ -14,6 +14,7 @@ public sealed class AnsuzRuneBehavior : RuneBehavior
         context.RuneEffectSystem.TrySpawnAnsuzAllyFromKilledEnemy(
             context.GameState,
             context.Path,
+            context.PathLength,
             context.PrimaryTarget,
             context.Projectile.Impact.SourceRuneTier);
     }

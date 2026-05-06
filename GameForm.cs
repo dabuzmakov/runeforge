@@ -1,31 +1,31 @@
 using runeforge.Controllers;
-using runeforge.Configs;
 using runeforge.Models;
+using runeforge.Systems;
 using runeforge.Views;
 
 namespace runeforge;
 
 public partial class GameForm : Form
 {
-    private const int CursorDrawSize = 36;
+    private const int WindowDragHeight = 72;
 
     private readonly GameLoop _gameLoop;
     private readonly GameModel _model;
     private readonly GameController _controller;
     private readonly GameRenderer _renderer;
-    private readonly Bitmap _defaultCursorTexture;
-    private readonly Bitmap _addCursorTexture;
-    private readonly Bitmap _moveUpCursorTexture;
-    private readonly Bitmap _subtractCursorTexture;
-    private readonly ContextMenuStrip _devSpawnMenu;
+    private readonly GameCursorRenderer _cursorRenderer;
+    private readonly Icon _appIcon;
 
     private Point _mousePosition;
-    private Point _devSpawnMenuPosition;
+    private Point _windowDragOffset;
     private bool _isLeftMouseDown;
+    private bool _isWindowDragging;
 
     public GameForm()
     {
         InitializeComponent();
+        _appIcon = LoadAppIcon();
+        Icon = _appIcon;
 
         SetStyle(
             ControlStyles.AllPaintingInWmPaint |
@@ -39,33 +39,30 @@ public partial class GameForm : Form
         _model = new GameModel(new GameBoard(ClientSize.Width, ClientSize.Height));
         _controller = new GameController(_model);
         _renderer = new GameRenderer(_model);
-        _defaultCursorTexture = LoadCursorTexture("Cursor Default");
-        _addCursorTexture = LoadCursorTexture("Cursor Add");
-        _moveUpCursorTexture = LoadCursorTexture("Cursor Move Up");
-        _subtractCursorTexture = LoadCursorTexture("Cursor Substract");
-        _devSpawnMenu = CreateDevSpawnMenu();
-        _gameLoop = new GameLoop(UpdateFrame, Invalidate);
+        _cursorRenderer = new GameCursorRenderer();
+        _gameLoop = new GameLoop(UpdateFrame, RenderFrame);
 
         _gameLoop.Start();
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        e.Graphics.Clear(GameRenderer.BackgroundColor);
         _renderer.Draw(e.Graphics);
         DrawCursor(e.Graphics);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         Cursor.Show();
+        _controller.SaveProfile();
         _gameLoop.Dispose();
         _renderer.Dispose();
-        _defaultCursorTexture.Dispose();
-        _addCursorTexture.Dispose();
-        _moveUpCursorTexture.Dispose();
-        _subtractCursorTexture.Dispose();
-        _devSpawnMenu.Dispose();
+        _cursorRenderer.Dispose();
+        _appIcon.Dispose();
         base.OnFormClosed(e);
     }
 
@@ -81,9 +78,30 @@ public partial class GameForm : Form
         base.OnMouseLeave(e);
     }
 
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.KeyCode == Keys.Escape)
+        {
+            Close();
+            e.Handled = true;
+            return;
+        }
+
+        base.OnKeyDown(e);
+    }
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         _mousePosition = e.Location;
+
+        if (_isWindowDragging)
+        {
+            Location = new Point(
+                Cursor.Position.X - _windowDragOffset.X,
+                Cursor.Position.Y - _windowDragOffset.Y);
+            return;
+        }
+
         base.OnMouseMove(e);
     }
 
@@ -93,15 +111,77 @@ public partial class GameForm : Form
 
         if (e.Button == MouseButtons.Left)
         {
-            _isLeftMouseDown = true;
-            Capture = true;
+            if (HandleLeftMouseDown(e.Location))
+            {
+                return;
+            }
         }
         else if (e.Button == MouseButtons.Right)
         {
-            ShowDevSpawnMenuIfAvailable(e.Location);
+            _controller.TryToggleTiwazModeAt(e.Location);
         }
 
         base.OnMouseDown(e);
+    }
+
+    private bool HandleLeftMouseDown(Point location)
+    {
+        if (HandleStartScreenClick(location) ||
+            HandleGameOverPopupClick(location) ||
+            HandlePausePopupClick(location))
+        {
+            _isLeftMouseDown = false;
+            return true;
+        }
+
+        if (HandleTopButtonClick(location))
+        {
+            _isLeftMouseDown = false;
+            return true;
+        }
+
+        if (IsWindowDragArea(location))
+        {
+            StartWindowDrag(location);
+            return true;
+        }
+
+        _isLeftMouseDown = true;
+        Capture = true;
+        return false;
+    }
+
+    private bool HandleTopButtonClick(Point location)
+    {
+        if (TopButtonLayout.GetExitButtonBounds(_model.Board.ViewportBounds).Contains(location))
+        {
+            Close();
+            return true;
+        }
+
+        if (CanUseHomeButton() &&
+            TopButtonLayout.GetHomeButtonBounds(_model.Board.ViewportBounds).Contains(location))
+        {
+            _controller.ReturnToStartScreen();
+            return true;
+        }
+
+        if (CanUsePauseButton() &&
+            TopButtonLayout.GetPauseButtonBounds(_model.Board.ViewportBounds).Contains(location))
+        {
+            _controller.TogglePause();
+            return true;
+        }
+
+        return false;
+    }
+
+    private void StartWindowDrag(Point location)
+    {
+        _isWindowDragging = true;
+        _isLeftMouseDown = false;
+        _windowDragOffset = location;
+        Capture = true;
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -110,6 +190,7 @@ public partial class GameForm : Form
 
         if (e.Button == MouseButtons.Left)
         {
+            _isWindowDragging = false;
             _isLeftMouseDown = false;
             Capture = false;
         }
@@ -122,24 +203,133 @@ public partial class GameForm : Form
         _controller.Update(deltaTime, _mousePosition, _isLeftMouseDown);
     }
 
-    private void DrawCursor(Graphics graphics)
+    private void RenderFrame()
     {
-        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-        var cursorTexture = _defaultCursorTexture;
-        if (ShouldUseMoveUpCursor())
+        Invalidate();
+        Update();
+    }
+
+    private static bool IsWindowDragArea(Point location)
+    {
+        return location.Y >= 0 && location.Y <= WindowDragHeight;
+    }
+
+    private bool CanUseHomeButton()
+    {
+        return !_controller.State.Ui.IsStartScreenOpen &&
+            _controller.State.Ui.BuildSelection.IsOpen;
+    }
+
+    private bool CanUsePauseButton()
+    {
+        return !_controller.State.Ui.IsStartScreenOpen &&
+            !_controller.State.Ui.BuildSelection.IsOpen &&
+            !_controller.State.IsDefeated;
+    }
+
+    private bool HandleStartScreenClick(Point location)
+    {
+        if (!_controller.State.Ui.IsStartScreenOpen)
         {
-            cursorTexture = _moveUpCursorTexture;
-        }
-        else if (ShouldUseSubtractCursor())
-        {
-            cursorTexture = _subtractCursorTexture;
-        }
-        else if (ShouldUseAddCursor())
-        {
-            cursorTexture = _addCursorTexture;
+            return false;
         }
 
-        graphics.DrawImage(cursorTexture, _mousePosition.X, _mousePosition.Y, CursorDrawSize, CursorDrawSize);
+        if (StartScreenLayout.GetPlayButtonBounds(_model.Board.ViewportBounds).Contains(location))
+        {
+            _controller.OpenBuildSelectionFromStartScreen();
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool HandlePausePopupClick(Point location)
+    {
+        if (!_controller.State.IsPaused ||
+            _controller.State.Ui.BuildSelection.IsOpen ||
+            _controller.State.IsDefeated)
+        {
+            return false;
+        }
+
+        var popupBounds = PausePopupLayout.GetPopupBounds(_model.Board.ViewportBounds);
+        if (PausePopupLayout.GetButtonBounds(popupBounds, PausePopupButtonKind.Resume).Contains(location))
+        {
+            _controller.ResumeGame();
+            return true;
+        }
+
+        if (PausePopupLayout.GetButtonBounds(popupBounds, PausePopupButtonKind.Restart).Contains(location))
+        {
+            _controller.RestartGame();
+            return true;
+        }
+
+        if (PausePopupLayout.GetButtonBounds(popupBounds, PausePopupButtonKind.Home).Contains(location))
+        {
+            _controller.ReturnToStartScreen();
+            return true;
+        }
+
+        return popupBounds.Contains(location);
+    }
+
+    private bool HandleGameOverPopupClick(Point location)
+    {
+        if (!_controller.State.IsDefeated)
+        {
+            return false;
+        }
+
+        var popupBounds = GameOverPopupLayout.GetAnimatedPopupBounds(
+            _model.Board.ViewportBounds,
+            _controller.State.Ui.GameOverPopupVisibility);
+
+        if (GameOverPopupLayout.GetButtonBounds(popupBounds, GameOverPopupButtonKind.Restart).Contains(location))
+        {
+            _controller.RestartGame();
+            return true;
+        }
+
+        if (GameOverPopupLayout.GetButtonBounds(popupBounds, GameOverPopupButtonKind.Home).Contains(location))
+        {
+            _controller.ReturnToStartScreen();
+            return true;
+        }
+
+        return popupBounds.Contains(location);
+    }
+
+    private void DrawCursor(Graphics graphics)
+    {
+        _cursorRenderer.Draw(graphics, _mousePosition, ResolveCursorKind());
+    }
+
+    private GameCursorKind ResolveCursorKind()
+    {
+        if (ShouldUseMoveUpCursor())
+        {
+            return GameCursorKind.MoveUp;
+        }
+
+        if (ShouldUseSubtractCursor())
+        {
+            return GameCursorKind.Subtract;
+        }
+
+        if (ShouldUseCannotUseCursor())
+        {
+            return GameCursorKind.CannotUse;
+        }
+
+        if (ShouldUseBuildGreenCursor())
+        {
+            return GameCursorKind.BuildGreen;
+        }
+
+        return ShouldUseAddCursor()
+            ? GameCursorKind.Add
+            : GameCursorKind.Default;
     }
 
     private bool ShouldUseMoveUpCursor()
@@ -150,75 +340,77 @@ public partial class GameForm : Form
     private bool ShouldUseSubtractCursor()
     {
         return !_controller.State.Ui.BuildSelection.IsOpen &&
+            !_controller.State.IsPaused &&
+            !_controller.State.IsDefeated &&
             _controller.State.Ui.DraggedRune != null &&
             _model.Board.BagBounds.Contains(_mousePosition);
     }
 
     private bool ShouldUseAddCursor()
     {
-        return !_controller.State.Ui.BuildSelection.IsOpen &&
-            _controller.State.Ui.DraggedRune == null &&
+        return CanUseRunePointAction() &&
             _model.Board.BagBounds.Contains(_mousePosition);
     }
 
-    private static Bitmap LoadCursorTexture(string textureName)
+    private bool ShouldUseBuildGreenCursor()
     {
-        var texturePath = ResolveCursorTexturePath(textureName);
-        return new Bitmap(texturePath);
+        return CanUseRunePointAction() &&
+            _model.Board.RerollBounds.Contains(_mousePosition);
     }
 
-    private static string ResolveCursorTexturePath(string textureName)
+    private bool ShouldUseCannotUseCursor()
     {
-        string[] candidatePaths =
-        [
-            Path.Combine(AppContext.BaseDirectory, "Assets", "Sprites", textureName + ".png"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Assets", "Sprites", textureName + ".png"))
-        ];
-
-        foreach (var path in candidatePaths)
+        if (_controller.State.Ui.IsStartScreenOpen)
         {
-            if (File.Exists(path))
-            {
-                return path;
-            }
+            return false;
         }
 
-        throw new FileNotFoundException($"Cursor texture '{textureName}' was not found.");
-    }
-
-    private ContextMenuStrip CreateDevSpawnMenu()
-    {
-        var menu = new ContextMenuStrip
+        if (_controller.State.Ui.BuildSelection.IsOpen)
         {
-            ShowImageMargin = false
-        };
-
-        foreach (var runeType in RuneDatabase.AllTypes)
-        {
-            var runeMenuItem = new ToolStripMenuItem(runeType.ToString());
-
-            for (var tier = RuneTierTuning.MinTier; tier <= RuneTierTuning.MaxTier; tier++)
-            {
-                var tierValue = tier;
-                var tierMenuItem = new ToolStripMenuItem($"Tier {tierValue}");
-                tierMenuItem.Click += (_, _) => _controller.TrySpawnDevRuneAt(_devSpawnMenuPosition, runeType, tierValue);
-                runeMenuItem.DropDownItems.Add(tierMenuItem);
-            }
-
-            menu.Items.Add(runeMenuItem);
+            return !_controller.State.Ui.BuildSelection.CanStart &&
+                BuildSelectionLayout.GetStartButtonBounds(_model.Board.ViewportBounds).Contains(_mousePosition);
         }
 
-        return menu;
-    }
-
-    private void ShowDevSpawnMenuIfAvailable(Point location)
-    {
-        if (!_controller.CanOpenDevSpawnMenuAt(location))
+        if (_controller.State.Ui.DraggedRune == null &&
+            !_controller.State.IsPaused &&
+            !_controller.State.IsDefeated &&
+            _model.Board.RerollBounds.Contains(_mousePosition) &&
+            _controller.State.Runes.Count == 0)
         {
-            return;
+            return true;
         }
 
-        _devSpawnMenuPosition = location;
-        _devSpawnMenu.Show(this, location);
+        return _controller.State.Ui.DraggedRune == null &&
+            !_controller.State.IsPaused &&
+            !_controller.State.IsDefeated &&
+            !_controller.State.Economy.CanAffordCurrentRuneSpawn &&
+            IsMouseOverRunePointAction();
     }
+
+    private bool CanUseRunePointAction()
+    {
+        return !_controller.State.Ui.IsStartScreenOpen &&
+            !_controller.State.Ui.BuildSelection.IsOpen &&
+            !_controller.State.IsPaused &&
+            !_controller.State.IsDefeated &&
+            _controller.State.Ui.DraggedRune == null &&
+            _controller.State.Economy.CanAffordCurrentRuneSpawn;
+    }
+
+    private bool IsMouseOverRunePointAction()
+    {
+        return _model.Board.BagBounds.Contains(_mousePosition) ||
+            _model.Board.RerollBounds.Contains(_mousePosition);
+    }
+
+    private static Icon LoadAppIcon()
+    {
+        return new Icon(ResolveAppIconPath());
+    }
+
+    private static string ResolveAppIconPath()
+    {
+        return AssetResolver.ResolveFile("App", "runeforge-icon.ico");
+    }
+
 }

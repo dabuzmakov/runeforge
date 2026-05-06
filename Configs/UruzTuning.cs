@@ -29,11 +29,11 @@ public static class UruzTuning
 
     private static readonly float[] MarkedHealthDamagePercentByTier =
     [
-        0.02f,
-        0.04f,
-        0.06f,
-        0.08f,
-        0.10f
+        0.012f,
+        0.024f,
+        0.036f,
+        0.048f,
+        0.060f
     ];
 
     public static float GetTornadoCooldownSeconds(int tier)

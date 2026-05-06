@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Numerics;
 using runeforge.Configs;
 using runeforge.Models;
+using runeforge.Systems;
 
 namespace runeforge.Effects;
 
@@ -68,6 +69,34 @@ public static class EffectRegistry
         return true;
     }
 
+    public static bool TryCreateJeraUpgradeEffect(Vector2 position, out AnimatedEffect? effect, float? scale = null)
+    {
+        effect = new AnimatedEffect(Get(EffectType.JeraUpgrade), JeraTuning.EffectRowIndex, position, scale);
+        return true;
+    }
+
+    public static bool TryCreateMannazLightningEffect(
+        Vector2 position,
+        EnemyEntity? attachedEnemy,
+        out AnimatedEffect? effect,
+        float? scale = null)
+    {
+        effect = new AnimatedEffect(
+            Get(EffectType.MannazLightning),
+            MannazTuning.LightningEffectRowIndex,
+            position,
+            scale,
+            attachedEnemy: attachedEnemy,
+            anchorBottomCenter: true,
+            attachedVerticalOffset: 10f);
+        return true;
+    }
+
+    public static SpriteSheetEffectDefinition GetTiwazChargeEffect()
+    {
+        throw new InvalidOperationException("Tiwaz charge sprite effect is no longer registered.");
+    }
+
     public static bool TryCreateLaguzExecuteEffect(Vector2 position, out AnimatedEffect? effect, float? scale = null)
     {
         effect = new AnimatedEffect(Get(EffectType.LaguzExecute), rowIndex: 1, position, scale);
@@ -129,6 +158,24 @@ public static class EffectRegistry
         return true;
     }
 
+    public static bool TryCreateRuneSwapEffect(Vector2 position, RuneColor color, out AnimatedEffect? effect)
+    {
+        effect = null;
+        if (!TryGetColorRowIndex(color, out var rowIndex))
+        {
+            return false;
+        }
+
+        effect = new AnimatedEffect(Get(EffectType.RuneSwap), rowIndex, position);
+        return true;
+    }
+
+    public static bool TryCreateTeleportEffect(Vector2 position, out AnimatedEffect? effect, float? scale = null)
+    {
+        effect = new AnimatedEffect(Get(EffectType.Teleport), rowIndex: 8, position, scale);
+        return true;
+    }
+
     public static SpriteSheetEffectDefinition GetRaidhoOverloadEffect()
     {
         return Get(EffectType.RaidhoOverload);
@@ -146,20 +193,24 @@ public static class EffectRegistry
 
     private static SpriteSheetEffectDefinition[] CreateDefinitions()
     {
-        var berkanoPoisonTexturePath = ResolveEffectTexturePath("Part 13", "berkano-effect.png");
-        var algizSweepTexturePath = ResolveEffectTexturePath("Part 5", "algiz-effect.png");
-        var runeHoldTexturePath = ResolveEffectTexturePath("Part 4", "rune-hold-effect.png");
-        var runeSpawnTexturePath = ResolveEffectTexturePath("Part 12", "rune_spawn.png");
-        var runeRemoveTexturePath = ResolveEffectTexturePath("Part 3", "rune_remove.png");
-        var mergeTexturePath = ResolveEffectTexturePath("Part 9", "merge.png");
-        var ehwazChainHitTexturePath = ResolveEffectTexturePath("Part 10", "ehwaz-effect.png");
-        var eiwazImpactTexturePath = ResolveEffectTexturePath("Part 10", "eiwaz-effect.png");
-        var kenazExplosionTexturePath = ResolveEffectTexturePath("Part 9", "kenaz-effect.png");
-        var laguzBlackHoleFramePaths = ResolveEffectFramePaths("laguz-effect", Path.Combine("Pixel Art Animated Portal", "Frames"));
-        var laguzExecuteTexturePath = ResolveEffectTexturePath("Part 8", "laguz-execute-effect.png");
-        var ansuzImpactTexturePath = ResolveEffectTexturePath("Part 6", "ansuz-effect.png");
-        var raidhoOverloadTexturePath = ResolveEffectTexturePath("Part 14", "raidho-effect.png");
-        var hagalazExplosionFramePaths = ResolveEffectFramePaths("explosion-effect");
+        var berkanoPoisonTexturePath = ResolveEffectTexturePath("berkano-poison.png");
+        var algizSweepTexturePath = ResolveEffectTexturePath("algiz-sweep.png");
+        var runeHoldTexturePath = ResolveEffectTexturePath("rune-hold.png");
+        var runeSpawnTexturePath = ResolveEffectTexturePath("rune-spawn.png");
+        var runeSwapTexturePath = ResolveEffectTexturePath("rune-swap.png");
+        var runeRemoveTexturePath = ResolveEffectTexturePath("rune-remove.png");
+        var mergeTexturePath = ResolveEffectTexturePath("merge.png");
+        var ehwazChainHitTexturePath = ResolveEffectTexturePath("ehwaz-chain-hit.png");
+        var eiwazImpactTexturePath = ResolveEffectTexturePath("eiwaz-impact.png");
+        var kenazExplosionTexturePath = ResolveEffectTexturePath("kenaz-explosion.png");
+        var laguzBlackHoleFramePaths = ResolveEffectFramePaths("laguz-black-hole");
+        var laguzExecuteTexturePath = ResolveEffectTexturePath("laguz-execute.png");
+        var ansuzImpactTexturePath = ResolveEffectTexturePath("ansuz-impact.png");
+        var jeraUpgradeTexturePath = ResolveEffectTexturePath("jera-upgrade.png");
+        var mannazLightningTexturePath = ResolveEffectTexturePath("mannaz-lightning.png");
+        var raidhoOverloadTexturePath = ResolveEffectTexturePath("raidho-overload.png");
+        var teleportTexturePath = ResolveEffectTexturePath("teleport.png");
+        var hagalazExplosionFramePaths = ResolveEffectFramePaths("hagalaz-explosion");
         var algizSweepFrameCount = DetermineFrameCount(algizSweepTexturePath, EffectFrameSize);
         var berkanoPoisonFrameCount = DetermineFrameCount(berkanoPoisonTexturePath, EffectFrameSize);
         var ehwazChainHitFrameCount = DetermineFrameCount(ehwazChainHitTexturePath, EffectFrameSize);
@@ -170,10 +221,14 @@ public static class EffectRegistry
         var laguzExecuteFrameCount = DetermineFrameCount(laguzExecuteTexturePath, EffectFrameSize);
         var kenazExplosionFrameCount = DetermineFrameCount(kenazExplosionTexturePath, EffectFrameSize);
         var ansuzImpactFrameCount = DetermineFrameCount(ansuzImpactTexturePath, EffectFrameSize);
+        var jeraUpgradeFrameCount = DetermineFrameCount(jeraUpgradeTexturePath, EffectFrameSize);
+        var mannazLightningFrameCount = DetermineFrameCount(mannazLightningTexturePath, EffectFrameSize);
         var runeHoldFrameCount = DetermineFrameCount(runeHoldTexturePath, EffectFrameSize);
         var runeSpawnFrameCount = DetermineFrameCount(runeSpawnTexturePath, EffectFrameSize);
+        var runeSwapFrameCount = DetermineFrameCount(runeSwapTexturePath, EffectFrameSize);
         var runeRemoveFrameCount = DetermineFrameCount(runeRemoveTexturePath, EffectFrameSize);
         var raidhoOverloadFrameCount = DetermineFrameCount(raidhoOverloadTexturePath, EffectFrameSize);
+        var teleportFrameCount = DetermineFrameCount(teleportTexturePath, EffectFrameSize);
 
         var definitions = new List<SpriteSheetEffectDefinition>
         {
@@ -256,6 +311,22 @@ public static class EffectRegistry
                 frameDuration: 0.05f,
                 defaultScale: AnsuzTuning.AllyHitEffectScale),
             new(
+                EffectType.JeraUpgrade,
+                jeraUpgradeTexturePath,
+                EffectFrameSize,
+                EffectFrameSize,
+                jeraUpgradeFrameCount,
+                frameDuration: 0.05f,
+                defaultScale: JeraTuning.EffectScale),
+            new(
+                EffectType.MannazLightning,
+                mannazLightningTexturePath,
+                EffectFrameSize,
+                EffectFrameSize,
+                mannazLightningFrameCount,
+                frameDuration: MannazTuning.LightningTickFrameDurationSeconds,
+                defaultScale: MannazTuning.LightningEffectScale),
+            new(
                 EffectType.RuneHold,
                 runeHoldTexturePath,
                 EffectFrameSize,
@@ -272,6 +343,14 @@ public static class EffectRegistry
                 frameDuration: 0.05f,
                 defaultScale: 3.1f),
             new(
+                EffectType.RuneSwap,
+                runeSwapTexturePath,
+                EffectFrameSize,
+                EffectFrameSize,
+                runeSwapFrameCount,
+                frameDuration: 0.05f,
+                defaultScale: 1.9f),
+            new(
                 EffectType.RuneRemove,
                 runeRemoveTexturePath,
                 EffectFrameSize,
@@ -286,7 +365,15 @@ public static class EffectRegistry
                 EffectFrameSize,
                 raidhoOverloadFrameCount,
                 frameDuration: 0.06f,
-                defaultScale: RaidhoTuning.OverloadEffectScale)
+                defaultScale: RaidhoTuning.OverloadEffectScale),
+            new(
+                EffectType.Teleport,
+                teleportTexturePath,
+                EffectFrameSize,
+                EffectFrameSize,
+                teleportFrameCount,
+                frameDuration: 0.045f,
+                defaultScale: 1.05f)
         };
 
         return [.. definitions];
@@ -321,71 +408,30 @@ public static class EffectRegistry
         return image.Size;
     }
 
-    private static string ResolveEffectTexturePath(string partDirectory, string fileName)
+    private static string ResolveEffectTexturePath(string fileName)
     {
-        var resolvedPath = TryResolveEffectTexturePath(partDirectory, fileName);
-        if (resolvedPath != null)
-        {
-            return resolvedPath;
-        }
-
-        throw new FileNotFoundException($"Could not locate effect texture '{fileName}' in Assets/Effects/{partDirectory}.");
+        return AssetResolver.ResolveFile("Effects", "SpriteSheets", fileName);
     }
 
-    private static string? TryResolveEffectTexturePath(string partDirectory, string fileName)
+    private static IReadOnlyList<string> ResolveEffectFramePaths(string effectDirectory)
     {
-        string[] candidatePaths =
-        [
-            Path.Combine(AppContext.BaseDirectory, "Assets", "Effects", partDirectory, fileName),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Assets", "Effects", partDirectory, fileName))
-        ];
-
-        foreach (var candidatePath in candidatePaths)
-        {
-            if (File.Exists(candidatePath))
+        var frameDirectory = AssetResolver.ResolveDirectory("Effects", "FrameAnimations", effectDirectory);
+        var framePaths = Directory
+            .GetFiles(frameDirectory, "*.png")
+            .OrderBy(static path =>
             {
-                return candidatePath;
-            }
+                var fileName = Path.GetFileNameWithoutExtension(path);
+                return ExtractTrailingNumber(fileName) ?? int.MaxValue;
+            })
+            .ThenBy(static path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (framePaths.Length > 0)
+        {
+            return framePaths;
         }
 
-        return null;
-    }
-
-    private static IReadOnlyList<string> ResolveEffectFramePaths(params string[] effectDirectories)
-    {
-        foreach (var effectDirectory in effectDirectories)
-        {
-            string[] candidateDirectories =
-            [
-                Path.Combine(AppContext.BaseDirectory, "Assets", "Effects", effectDirectory),
-                Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Assets", "Effects", effectDirectory))
-            ];
-
-            foreach (var candidateDirectory in candidateDirectories)
-            {
-                if (!Directory.Exists(candidateDirectory))
-                {
-                    continue;
-                }
-
-                var framePaths = Directory
-                    .GetFiles(candidateDirectory, "*.png")
-                    .OrderBy(static path =>
-                    {
-                        var fileName = Path.GetFileNameWithoutExtension(path);
-                        return ExtractTrailingNumber(fileName) ?? int.MaxValue;
-                    })
-                    .ThenBy(static path => path, StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-
-                if (framePaths.Length > 0)
-                {
-                    return framePaths;
-                }
-            }
-        }
-
-        throw new DirectoryNotFoundException($"Could not locate effect frames in any of: {string.Join(", ", effectDirectories.Select(static directory => $"Assets/Effects/{directory}"))}.");
+        throw new DirectoryNotFoundException($"Could not locate effect frames in Assets/Effects/FrameAnimations/{effectDirectory}.");
     }
 
     private static int? ExtractTrailingNumber(string fileNameWithoutExtension)

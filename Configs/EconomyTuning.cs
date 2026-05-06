@@ -2,11 +2,11 @@ namespace runeforge.Configs;
 
 public static class EconomyTuning
 {
-    public const int InitialRunePoints = 100;
+    public const int InitialRunePoints = 140;
     public const int InitialRuneSpawnCost = 10;
-    public const int RuneSpawnCostIncrement = 10;
-    private const float BaseKillRewardAsInitialSpawnCostFraction = 0.45f;
-    private const float TierRewardGrowthAsSpawnCostIncrementFraction = 0.30f;
+    public const int RuneSpawnCostIncrement = 8;
+    private const float BaseKillRewardAsInitialSpawnCostFraction = 0.5f;
+    private const float TierRewardGrowthAsSpawnCostIncrementFraction = 0.3f;
 
     public static int GetEnemyKillRunePointReward(EnemyType enemyType, int enemyTier)
     {
@@ -23,6 +23,11 @@ public static class EconomyTuning
         {
             EnemyType.Fast => 0.85f,
             EnemyType.Slow => 1.25f,
+            EnemyType.Regenerator => 1.15f,
+            EnemyType.Teleporter => 1.2f,
+            EnemyType.Aura => 1.1f,
+            EnemyType.Cluster => 1.45f,
+            EnemyType.ClusterShard => 0.55f,
             _ => 1f
         };
     }

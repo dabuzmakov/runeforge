@@ -86,8 +86,13 @@ public sealed class RuneCombatSystem
                     didFireAutoAttack = behavior.TryPerformAttack(context, rune, target);
                     if (didFireAutoAttack)
                     {
+                        var attackInterval = behavior.GetAttackInterval(rune);
                         rune.SpecialAttack.RegisterAttack();
-                        rune.Cooldown.Remaining = behavior.GetAttackInterval(rune);
+                        rune.Cooldown.Remaining += attackInterval;
+                        if (rune.Cooldown.Remaining <= 0f)
+                        {
+                            rune.Cooldown.Remaining = attackInterval;
+                        }
                     }
                 }
             }

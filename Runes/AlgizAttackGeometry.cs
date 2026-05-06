@@ -145,6 +145,11 @@ public static class AlgizAttackGeometry
         Vector2 runeCenter)
     {
         var anchorDistance = GetAnchorResult(path, row, column, runeCenter).PathDistance;
+        if (!IsCornerCell(row, column))
+        {
+            anchorDistance += AlgizTuning.NonCornerAttackForwardOffset;
+        }
+
         var halfLength = AlgizTuning.AttackPathLength * 0.5f;
         var startDistance = Math.Clamp(anchorDistance - halfLength, 0f, pathLength);
         var endDistance = Math.Clamp(anchorDistance + halfLength, 0f, pathLength);

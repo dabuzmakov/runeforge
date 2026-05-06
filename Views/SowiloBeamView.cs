@@ -2,16 +2,29 @@ using System.Drawing.Drawing2D;
 using System.Numerics;
 using runeforge.Configs;
 using runeforge.Models;
+using runeforge.Systems;
 
 namespace runeforge.Views;
 
 public sealed class SowiloBeamView : IDisposable
 {
     private readonly Bitmap _texture;
+    private readonly Pen _outerGlowPen;
+    private readonly Pen _innerGlowPen;
 
     public SowiloBeamView()
     {
         _texture = LoadBitmap(ResolveTexturePath());
+        _outerGlowPen = new Pen(Color.FromArgb(78, 255, 202, 84), 1f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        };
+        _innerGlowPen = new Pen(Color.FromArgb(166, 255, 244, 188), 1f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        };
     }
 
     public void Draw(Graphics graphics, SowiloBeamInstance beam)
@@ -36,20 +49,13 @@ public sealed class SowiloBeamView : IDisposable
         var outerGlowEndPoint = visualEndPoint - (beamDirection * (outerGlowWidth * 0.5f));
         var innerGlowStartPoint = beam.StartPoint + (beamDirection * (innerGlowWidth * 0.5f));
         var innerGlowEndPoint = visualEndPoint - (beamDirection * (innerGlowWidth * 0.5f));
+        _outerGlowPen.Color = Color.FromArgb(glowAlpha, 255, 202, 84);
+        _outerGlowPen.Width = outerGlowWidth;
+        _innerGlowPen.Color = Color.FromArgb(coreAlpha, 255, 244, 188);
+        _innerGlowPen.Width = innerGlowWidth;
 
-        using var outerGlowPen = new Pen(Color.FromArgb(glowAlpha, 255, 202, 84), outerGlowWidth)
-        {
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round
-        };
-        using var innerGlowPen = new Pen(Color.FromArgb(coreAlpha, 255, 244, 188), innerGlowWidth)
-        {
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round
-        };
-
-        graphics.DrawLine(outerGlowPen, outerGlowStartPoint.X, outerGlowStartPoint.Y, outerGlowEndPoint.X, outerGlowEndPoint.Y);
-        graphics.DrawLine(innerGlowPen, innerGlowStartPoint.X, innerGlowStartPoint.Y, innerGlowEndPoint.X, innerGlowEndPoint.Y);
+        graphics.DrawLine(_outerGlowPen, outerGlowStartPoint.X, outerGlowStartPoint.Y, outerGlowEndPoint.X, outerGlowEndPoint.Y);
+        graphics.DrawLine(_innerGlowPen, innerGlowStartPoint.X, innerGlowStartPoint.Y, innerGlowEndPoint.X, innerGlowEndPoint.Y);
 
         var state = graphics.Save();
         graphics.TranslateTransform(beam.StartPoint.X, beam.StartPoint.Y);
@@ -78,26 +84,14 @@ public sealed class SowiloBeamView : IDisposable
 
     public void Dispose()
     {
+        _outerGlowPen.Dispose();
+        _innerGlowPen.Dispose();
         _texture.Dispose();
     }
 
     private static string ResolveTexturePath()
     {
-        string[] candidatePaths =
-        [
-            Path.Combine(AppContext.BaseDirectory, "Assets", "Effects", "sowilo-effect.png"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Assets", "Effects", "sowilo-effect.png"))
-        ];
-
-        foreach (var path in candidatePaths)
-        {
-            if (File.Exists(path))
-            {
-                return path;
-            }
-        }
-
-        throw new FileNotFoundException("Could not locate Assets/Effects/sowilo-effect.png.");
+        return AssetResolver.ResolveFile("Effects", "SpriteSheets", "sowilo-beam.png");
     }
 
     private static Bitmap LoadBitmap(string path)
